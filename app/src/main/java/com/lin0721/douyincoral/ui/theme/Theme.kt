@@ -49,6 +49,3 @@ private val typography = Typography(
 fun DouyinCoralTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = scheme, typography = typography, content = content)
 }
-
-@Suppress("unused")
-private val unusedDark = isSystemInDarkTheme()
