@@ -4,7 +4,9 @@ import android.webkit.CookieManager
 import com.lin0721.douyincoral.core.Diag
 import com.lin0721.douyincoral.core.model.VideoInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -43,26 +45,33 @@ object CdnProbe {
         cache.remove(key)
     }
 
-    /** 依次探测候选地址，返回第一个能读的；全挂就把第一条兜底交出去 */
+    /** 候选地址并发赛跑，谁先回 200 用谁；全挂就把第一条兜底交出去 */
     suspend fun resolve(key: String, video: VideoInfo): String = withContext(Dispatchers.IO) {
         cached(key)?.let { return@withContext it }
         val list = candidates(video)
         if (list.isEmpty()) return@withContext ""
-        for (url in list.take(5)) {
-            if (probe(url)) {
-                remember(key, url)
-                Diag.log("CdnProbe", "hit $url".take(160))
-                return@withContext url
+        val urls = list.take(4)
+        val winner = withTimeoutOrNull(3500L) {
+            val jobs = urls.map { url ->
+                async {
+                    if (probe(url)) url else null
+                }
             }
+            jobs.firstNotNullOfOrNull { it.await() }
         }
-        Diag.log("CdnProbe", "all failed, fallback ${list.first().take(120)}")
+        if (winner != null) {
+            remember(key, winner)
+            Diag.log("CdnProbe", "hit ${winner.take(110)}")
+            return@withContext winner
+        }
+        Diag.log("CdnProbe", "all failed, fallback ${list.first().take(100)}")
         list.first()
     }
 
     private fun probe(url: String): Boolean = runCatching {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 4000
-            readTimeout = 4000
+            connectTimeout = 2500
+            readTimeout = 2500
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("User-Agent", UA)

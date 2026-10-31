@@ -37,35 +37,64 @@ import com.lin0721.douyincoral.ui.theme.Coral
 import kotlinx.coroutines.delay
 
 private const val LOGIN_UA =
-    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "Chrome/120.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+        "Chrome/124.0.0.0 Safari/537.36"
 
-/** 自动把网页上的「登录」按下去，省得用户在密密麻麻的页面里找 */
+/**
+ * 抖音桌面版登录入口：先把视口撑成桌面宽度（否则站点会切成移动布局，
+ * 页面上只剩「下载APP」和菜单按钮），再找「登录」按下去。
+ */
+private const val PREPARE_JS = """
+(function () {
+  try {
+    var m = document.querySelector('meta[name=viewport]');
+    if (!m) {
+      m = document.createElement('meta');
+      m.name = 'viewport';
+      document.head.appendChild(m);
+    }
+    m.setAttribute('content', 'width=1280, initial-scale=0.42');
+  } catch (e) { }
+  var out = { title: document.title, text: (document.body ? document.body.innerText : '').slice(0, 90) };
+  return JSON.stringify(out);
+})();
+"""
+
 private const val CLICK_LOGIN_JS = """
 (function () {
-  function findAndClick() {
-    var nodes = document.querySelectorAll('button, div, span, a, p');
-    for (var i = 0; i < nodes.length; i++) {
-      var t = (nodes[i].innerText || '').trim();
-      if (t === '登录' || t === '立即登录' || t === '登录/注册') {
-        var r = nodes[i].getBoundingClientRect();
-        if (r.width > 2 && r.height > 2) {
-          nodes[i].click();
-          return true;
-        }
+  function visible(el) {
+    var r = el.getBoundingClientRect();
+    return r.width > 2 && r.height > 2;
+  }
+  function tryLogin() {
+    var els = [].slice.call(document.querySelectorAll('button, div, span, a, p, [data-e2e]'));
+    for (var i = 0; i < els.length; i++) {
+      var t = (els[i].innerText || '').trim();
+      if ((t === '登录' || t === '立即登录' || t === '登录/注册' || t === '登录后查看') && visible(els[i])) {
+        els[i].click();
+        return 'login';
       }
     }
-    return false;
+    var e2e = document.querySelector('[data-e2e="login-btn"], [data-e2e*="login"]');
+    if (e2e && visible(e2e)) { e2e.click(); return 'e2e'; }
+    return '';
+  }
+  function hasForm() {
+    return !!(document.querySelector('input[type=tel], input[type=text], input[type=password]')) ||
+      (document.body && /验证码|扫码登录|密码登录/.test(document.body.innerText || ''));
   }
   var tries = 0;
   function loop() {
     tries++;
-    if (findAndClick()) { return 'clicked'; }
-    if (tries > 25) { return 'not-found'; }
-    setTimeout(loop, 800);
+    var r = tryLogin();
+    if (r) { return { hit: r, tries: tries }; }
+    if (hasForm()) { return { hit: 'form', tries: tries }; }
+    if (tries > 30) { return { hit: 'none', tries: tries }; }
+    setTimeout(loop, 700);
+    return null;
   }
-  setTimeout(loop, 1000);
-  return 'armed';
+  var res = loop();
+  return JSON.stringify({ started: true, first: res || 'pending' });
 })();
 """
 
@@ -153,7 +182,9 @@ fun LoginPanel(onDismiss: () -> Unit, onFinished: () -> Unit) {
                             settings.loadsImagesAutomatically = true
                             settings.useWideViewPort = true
                             settings.loadWithOverviewMode = true
-                            settings.setSupportZoom(false)
+                            settings.setSupportZoom(true)
+                            settings.displayZoomControls = false
+                            settings.builtInZoomControls = false
                             settings.mediaPlaybackRequiresUserGesture = false
                             settings.userAgentString = LOGIN_UA
                             CookieManager.getInstance().setAcceptCookie(true)
@@ -161,9 +192,18 @@ fun LoginPanel(onDismiss: () -> Unit, onFinished: () -> Unit) {
                             webViewClient = object : WebViewClient() {
                                 override fun onPageFinished(view: WebView, url: String?) {
                                     Diag.log("Login", "page finished ${url?.take(80)}")
-                                    view.evaluateJavascript(CLICK_LOGIN_JS) { r ->
-                                        Diag.log("Login", "auto-click $r")
+                                    view.evaluateJavascript(PREPARE_JS) { r ->
+                                        Diag.log("Login", "page= $r")
                                     }
+                                    view.postDelayed({
+                                        view.evaluateJavascript(CLICK_LOGIN_JS) { r ->
+                                            Diag.log("Login", "auto-click $r")
+                                            if (r != null && r.contains("\"hit\":\"none\"")) {
+                                                Diag.log("Login", "no button, goto user/self")
+                                                view.loadUrl("https://www.douyin.com/user/self")
+                                            }
+                                        }
+                                    }, 1500)
                                 }
                             }
                             loadUrl("https://www.douyin.com/home")

@@ -178,7 +178,7 @@ class DouyinWebEngine(private val appContext: Context) {
                         appContext,
                     )
                     when {
-                        !glue && tries < 120 -> main.postDelayed(this, 1000)
+                        !glue && tries < 120 -> main.postDelayed(this, if (tries < 15) 400 else 1000)
                         glue && (ac || patched) -> {
                             hasSigner = ac
                             _state.value = State.READY
@@ -201,14 +201,14 @@ class DouyinWebEngine(private val appContext: Context) {
                         else -> {
                             // 页面自己也不动，轻推一下逼它发请求
                             if (tries % 3 == 0) wv.evaluateJavascript(NUDGE_JS, null)
-                            main.postDelayed(this, 1000)
+                            main.postDelayed(this, if (tries < 15) 400 else 1000)
                         }
                     }
                 }
             }
         }
         readyLoopRun = probe
-        main.postDelayed(probe, 1200)
+        main.postDelayed(probe, 250)
     }
 
     /** 把网页当成 RPC 服务调用；返回解析后的 JSON */

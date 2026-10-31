@@ -130,6 +130,12 @@ fun AppRoot() {
         }
     }
 
+    // 别等探针确认，先踹一脚：RPC 内部会自己等签名器，成了就直接出画面
+    LaunchedEffect(Unit) {
+        delay(900)
+        if (items.isEmpty()) loadMore()
+    }
+
     LaunchedEffect(engineState) {
         if (engineState == DouyinWebEngine.State.READY && items.isEmpty() && !loading) {
             refreshSelf()
