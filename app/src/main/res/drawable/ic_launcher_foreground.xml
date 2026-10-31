@@ -3,7 +3,26 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- 远处细浪 -->
     <path
-        android:fillColor="#D85A30"
-        android:pathData="M54,30c-9,0 -16,7 -16,16c0,9 7,16 16,16c2,0 4,0 6,-1l14,9l-4,-13c3,-3 4,-7 4,-11C74,37 67,30 54,30zM46,42a4,4 0 1,1 8,0a4,4 0 1,1 -8,0zM60,48a4,4 0 1,1 8,0a4,4 0 1,1 -8,0z" />
+        android:pathData="M30,45C37,38 44,38 51,45C58,52 65,52 72,45"
+        android:strokeColor="#F6F4EF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.5"
+        android:fillColor="#00000000" />
+
+    <!-- 主浪 -->
+    <path
+        android:pathData="M20,66C30,53 40,53 50,66C60,79 70,79 80,66"
+        android:strokeColor="#D85A30"
+        android:strokeWidth="9"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- 浪尖的一点 -->
+    <path
+        android:pathData="M82,36m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0"
+        android:fillColor="#D85A30" />
 </vector>
