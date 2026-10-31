@@ -130,12 +130,6 @@ fun AppRoot() {
         }
     }
 
-    // 别等探针确认，先踹一脚：RPC 内部会自己等签名器，成了就直接出画面
-    LaunchedEffect(Unit) {
-        delay(900)
-        if (items.isEmpty()) loadMore()
-    }
-
     LaunchedEffect(engineState) {
         if (engineState == DouyinWebEngine.State.READY && items.isEmpty() && !loading) {
             refreshSelf()
@@ -231,7 +225,7 @@ fun AppRoot() {
         }
 
         if (showLogin) {
-            LoginPanel(
+            LoginSheet(
                 onDismiss = { showLogin = false },
                 onFinished = {
                     showLogin = false
@@ -348,6 +342,8 @@ private fun FeedPager(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { items.size })
+    var loadedId by remember { mutableStateOf<String?>(null) }
+    var playing by remember { mutableStateOf(false) }
 
     val player = remember {
         val headers = buildMap {
@@ -366,11 +362,16 @@ private fun FeedPager(
     DisposableEffect(Unit) { onDispose { player.release() } }
 
     LaunchedEffect(pagerState.currentPage, items.size) {
-        val item = items.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+        val page = pagerState.currentPage
+        val item = items.getOrNull(page) ?: return@LaunchedEffect
+        player.stop()
+        player.clearMediaItems()
+        loadedId = null
+        playing = false
         if (item.video.playUrl.isNotEmpty() || item.video.playUrls.isNotEmpty()) {
             // CDN 有多条线路，先探通再播，避免直接吃到 403
             val playable = CdnProbe.resolve(item.id, item.video)
-            if (playable.isNotEmpty()) {
+            if (playable.isNotEmpty() && pagerState.currentPage == page) {
                 Diag.log("Play", "play ${item.id} ${playable.take(90)}")
                 player.setMediaItem(MediaItem.fromUri(playable))
                 player.prepare()
@@ -383,12 +384,19 @@ private fun FeedPager(
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    loadedId = items.getOrNull(pagerState.currentPage)?.id
+                }
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch {
                         val next = pagerState.currentPage + 1
                         if (next < items.size) pagerState.animateScrollToPage(next)
                     }
                 }
+            }
+
+            override fun onIsPlayingChanged(isPlayingNow: Boolean) {
+                playing = isPlayingNow
             }
         }
         player.addListener(listener)
@@ -414,7 +422,7 @@ private fun FeedPager(
                         )
                     },
             ) {
-                if (page == pagerState.currentPage) {
+                if (page == pagerState.currentPage && loadedId == aweme.id) {
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
@@ -431,6 +439,25 @@ private fun FeedPager(
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    )
+                    if (page == pagerState.currentPage) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                color = Coral.Content.copy(alpha = 0.7f),
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
+                }
+
+                // 暂停时中间给个播放图标
+                if (page == pagerState.currentPage && loadedId == aweme.id && !playing) {
+                    Icon(
+                        Icons.Rounded.PlayArrow,
+                        contentDescription = "继续播放",
+                        tint = Coral.Content.copy(alpha = 0.86f),
+                        modifier = Modifier.align(Alignment.Center).size(76.dp),
                     )
                 }
 
