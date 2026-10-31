@@ -12,6 +12,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.lin0721.douyincoral.core.Diag
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,12 +91,18 @@ class DouyinWebEngine(private val appContext: Context) {
                 request: WebResourceRequest,
             ): WebResourceResponse? = blockHeavy(request)
 
+            override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                injectedFor = null
+                Diag.log(TAG, "start $url", appContext)
+            }
+
             override fun onPageCommitVisible(view: WebView, url: String?) {
-                inject()
+                inject(force = true)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
-                inject()
+                Diag.log(TAG, "finish $url", appContext)
+                inject(force = true)
                 startReadyLoop()
             }
 
@@ -135,44 +142,61 @@ class DouyinWebEngine(private val appContext: Context) {
         )
     }
 
-    private fun inject() {
+    private fun inject(force: Boolean = false) {
         val wv = webView ?: return
-        if (injectedFor == wv.url) return
+        if (!force && injectedFor == wv.url) return
         injectedFor = wv.url
-        wv.evaluateJavascript(PumpScript.JS, null)
+        wv.evaluateJavascript(PumpScript.JS) { result ->
+            Diag.log(TAG, "inject -> $result", appContext)
+        }
     }
 
+    /**
+     * 页面自带的签名函数是异步加载的，有时候要几十秒才出现，期间还得防着页面把文档整个换掉
+     * （风控挑战页常常如此），所以这里一直探、并且隔一会儿补注入一次。
+     */
     private fun startReadyLoop() {
         val wv = webView ?: return
         readyLoopRun?.let { main.removeCallbacks(it) }
         var tries = 0
+        var announced = false
         val probe = object : Runnable {
             override fun run() {
                 tries++
+                if (tries % 8 == 0) inject(force = true)
                 wv.evaluateJavascript(PROBE_JS) { result ->
                     val text = result?.trim()?.trim('"') ?: ""
+                    Diag.log(TAG, "probe#$tries=$text", appContext)
                     when {
                         text.startsWith("1") -> {
                             hasSigner = true
                             _state.value = State.READY
                             _status.value = "就绪"
+                            Diag.log(TAG, "ready with signer", appContext)
+                            Diag.flush(appContext)
                         }
                         text.startsWith("2") -> {
                             hasSigner = false
-                            _state.value = State.READY
-                            _status.value = "页面已就绪，签名器还在加载"
+                            if (!announced) {
+                                announced = true
+                                _state.value = State.READY
+                                _status.value = "页面已就绪，正在等签名器"
+                            }
+                            if (tries < 120) main.postDelayed(this, 1000)
                         }
-                        tries >= 60 -> {
+                        tries >= 120 -> {
                             _state.value = State.READY
-                            _status.value = "页面加载较慢，仍在等签名器"
+                            _status.value = "页面打开了，但签名器一直没出现"
+                            Diag.log(TAG, "give up waiting signer", appContext)
+                            Diag.flush(appContext)
                         }
-                        else -> main.postDelayed(this, 1200)
+                        else -> main.postDelayed(this, 1000)
                     }
                 }
             }
         }
         readyLoopRun = probe
-        main.postDelayed(probe, 1500)
+        main.postDelayed(probe, 1200)
     }
 
     /** 把网页当成 RPC 服务调用；返回解析后的 JSON */
@@ -198,6 +222,7 @@ class DouyinWebEngine(private val appContext: Context) {
             pending.remove(id)?.deferred?.completeExceptionally(DouyinException("请求超时：$path"))
         }
         pending[id] = Pending(deferred, timer)
+        Diag.log(TAG, "rpc $method $path", appContext)
         main.post {
             wv.evaluateJavascript(js, null)
             main.postDelayed(timer, timeoutMs)
@@ -222,6 +247,7 @@ class DouyinWebEngine(private val appContext: Context) {
                 val id = obj.optString("id")
                 val p = pending.remove(id) ?: return
                 main.removeCallbacks(p.timer)
+                Diag.log(TAG, "rpc-done ${obj.optBoolean("ok")} ${obj.optString("err")} ${obj.optString("body").take(120)}", appContext)
                 if (obj.optBoolean("ok")) {
                     val text = obj.optString("body")
                     val json = try {
@@ -237,7 +263,12 @@ class DouyinWebEngine(private val appContext: Context) {
                     )
                 }
             }
-            "capture" -> onCapture?.invoke(obj.optString("url"), obj.optString("body"))
+            "capture" -> {
+                val u = obj.optString("url")
+                val b = obj.optString("body")
+                Diag.log(TAG, "capture ${u.take(140)} len=${b.length}", appContext)
+                onCapture?.invoke(u, b)
+            }
             "diag", "boot" -> onDebug?.invoke(raw)
             else -> Log.d(TAG, "payload $raw")
         }

@@ -146,35 +146,43 @@ internal object PumpScript {
   };
 
   window.__mcRpc = function (id, path, paramsJson, method, body) {
-    var u;
-    try { u = new URL(path, location.origin); } catch (e) {
-      post({ type: 'rpc', id: id, ok: false, err: 'bad-url' });
-      return;
-    }
-    try {
-      var p = JSON.parse(paramsJson || '{}');
-      for (var k in p) {
-        if (p[k] !== null && p[k] !== undefined) { u.searchParams.set(k, String(p[k])); }
-      }
-    } catch (e) { }
-    applyCommon(u);
     var verb = (method || 'GET').toUpperCase();
-    if (verb === 'GET' && !sign(u)) {
-      post({ type: 'rpc', id: id, ok: false, err: 'sign-unavailable' });
-      return;
-    }
-    var init = { method: verb, credentials: 'include', headers: { 'accept': 'application/json, text/plain, */*' } };
-    if (verb === 'POST') {
-      init.headers['content-type'] = 'application/x-www-form-urlencoded';
-      init.body = body || '';
-    }
-    origFetch.call(window, u.toString(), init).then(function (r) {
-      return r.text().then(function (t) {
-        post({ type: 'rpc', id: id, ok: true, status: r.status, body: t });
+    var attempt = 0;
+
+    function go() {
+      var u;
+      try { u = new URL(path, location.origin); } catch (e) {
+        post({ type: 'rpc', id: id, ok: false, err: 'bad-url' });
+        return;
+      }
+      try {
+        var p = JSON.parse(paramsJson || '{}');
+        for (var k in p) {
+          if (p[k] !== null && p[k] !== undefined) { u.searchParams.set(k, String(p[k])); }
+        }
+      } catch (e) { }
+      applyCommon(u);
+      if (verb === 'GET' && !sign(u)) {
+        attempt++;
+        if (attempt < 30) { setTimeout(go, 400); return; }
+        post({ type: 'rpc', id: id, ok: false, err: 'sign-unavailable' });
+        return;
+      }
+      var init = { method: verb, credentials: 'include', headers: { 'accept': 'application/json, text/plain, */*' } };
+      if (verb === 'POST') {
+        init.headers['content-type'] = 'application/x-www-form-urlencoded';
+        init.body = body || '';
+      }
+      origFetch.call(window, u.toString(), init).then(function (r) {
+        return r.text().then(function (t) {
+          post({ type: 'rpc', id: id, ok: true, status: r.status, body: t });
+        });
+      }).catch(function (e) {
+        post({ type: 'rpc', id: id, ok: false, err: String(e) });
       });
-    }).catch(function (e) {
-      post({ type: 'rpc', id: id, ok: false, err: String(e) });
-    });
+    }
+
+    go();
   };
 
   window.__mcSignDiagnose = function () {

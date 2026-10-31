@@ -80,13 +80,27 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun collect(awemeId: String, collect: Boolean) {
-        val json = engine.request(
-            "/aweme/v1/web/commit/item/collect/",
-            webParams + mapOf("aweme_id" to awemeId, "action" to if (collect) 1 else 0),
-            method = "POST",
-            body = "aweme_id=$awemeId&action=${if (collect) 1 else 0}",
-        )
-        checkStatus(json)
+        val action = if (collect) 1 else 0
+        val body = "aweme_id=$awemeId&action=$action"
+        // 官方包里收藏走 /aweme/v1/aweme/collect/，网页端对应路径是 /aweme/v1/web/aweme/collect/；
+        // 老的 /commit/item/collect/ 在新版本里已经不认了，留作兜底。
+        val paths = listOf("/aweme/v1/web/aweme/collect/", "/aweme/v1/web/commit/item/collect/")
+        var last: Exception? = null
+        for (path in paths) {
+            try {
+                val json = engine.request(
+                    path,
+                    webParams + mapOf("aweme_id" to awemeId, "action" to action),
+                    method = "POST",
+                    body = body,
+                )
+                checkStatus(json)
+                return
+            } catch (e: Exception) {
+                last = e
+            }
+        }
+        throw last ?: DouyinException("收藏失败")
     }
 
     suspend fun follow(userId: String, secUid: String, follow: Boolean) {

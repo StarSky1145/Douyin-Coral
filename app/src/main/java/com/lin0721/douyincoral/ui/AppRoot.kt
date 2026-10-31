@@ -1,5 +1,7 @@
 package com.lin0721.douyincoral.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,16 +40,19 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,12 +67,15 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import com.lin0721.douyincoral.core.Diag
 import com.lin0721.douyincoral.core.data.DouyinRepo
 import com.lin0721.douyincoral.core.data.VideoDownloader
 import com.lin0721.douyincoral.core.model.Aweme
+import com.lin0721.douyincoral.core.model.AwemeParser
 import com.lin0721.douyincoral.core.model.Profile
 import com.lin0721.douyincoral.core.web.DouyinWebEngine
 import com.lin0721.douyincoral.ui.theme.Coral
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val UA =
@@ -102,18 +111,22 @@ fun AppRoot() {
         me = runCatching { repo.selfProfile() }.getOrNull()
     }
 
-    suspend fun loadMore() {
+    suspend fun loadMore(attempt: Int = 0) {
         if (loading) return
         loading = true
         loadError = null
-        runCatching { repo.feed(cursor = cursor) }
-            .onSuccess { page ->
-                items = (items + page.items).distinctBy { it.id }
-                cursor = if (page.cursor > 0) page.cursor else cursor + page.items.size
-                hasMore = page.hasMore && page.items.isNotEmpty()
-            }
-            .onFailure { loadError = it.message ?: "加载失败" }
+        val result = runCatching { repo.feed(cursor = cursor) }
+        result.onSuccess { page ->
+            items = (items + page.items).distinctBy { it.id }
+            cursor = if (page.cursor > 0) page.cursor else cursor + page.items.size
+            hasMore = page.hasMore && page.items.isNotEmpty()
+        }.onFailure { loadError = it.message ?: "加载失败" }
         loading = false
+        // 签名器/网络还没热起来时，别把用户丢在错误页，自己再试几次
+        if (result.isFailure && items.isEmpty() && attempt < 3) {
+            delay(3000)
+            loadMore(attempt + 1)
+        }
     }
 
     LaunchedEffect(engineState) {
@@ -123,21 +136,44 @@ fun AppRoot() {
         }
     }
 
+    // 页面自己拉到的推荐流，直接截下来用：这条路完全不依赖我们的签名
+    DisposableEffect(engine) {
+        engine.onCapture = { url, body ->
+            val interesting = url.contains("/tab/feed/") || url.contains("/aweme/post/")
+            if (interesting && body.contains("aweme_list")) {
+                scope.launch {
+                    val parsed = runCatching {
+                        AwemeParser.parseFeed(org.json.JSONObject(body))
+                    }.getOrNull()
+                    if (parsed != null && parsed.items.isNotEmpty()) {
+                        items = (items + parsed.items).distinctBy { it.id }
+                        if (parsed.cursor > 0) cursor = parsed.cursor
+                        hasMore = parsed.hasMore
+                    }
+                }
+            }
+        }
+        onDispose { engine.onCapture = null }
+    }
+
     DisposableEffect(Unit) {
         onDispose { engine.destroy() }
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        // 数据泵：真实渲染、几乎不可见、不参与触摸
+        // 数据泵：真实渲染、几乎不可见
         AndroidView(
             factory = { ctx -> engine.createView(ctx) },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().alpha(0.01f),
         )
 
         if (items.isEmpty()) {
-            EmptyState(engineStatus = engineStatus, error = loadError, onRetry = {
-                scope.launch { loadMore() }
-            })
+            LoadingScreen(
+                engineState = engineState.name,
+                engineStatus = engineStatus,
+                error = loadError,
+                onRetry = { scope.launch { loadMore() } },
+            )
         } else {
             FeedPager(
                 items = items,
@@ -224,22 +260,65 @@ fun AppRoot() {
 }
 
 @Composable
-private fun EmptyState(engineStatus: String, error: String?, onRetry: () -> Unit) {
+private fun LoadingScreen(
+    engineState: String,
+    engineStatus: String,
+    error: String?,
+    onRetry: () -> Unit,
+) {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            tick++
+        }
+    }
+    val tail = remember(tick) {
+        Diag.dump().lines().filter { it.isNotBlank() }.takeLast(7).joinToString("\n")
+    }
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Coral.Background)
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CircularProgressIndicator(color = Coral.Accent, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.height(20.dp))
-        Text("正在准备推荐流", color = Coral.Content, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(8.dp))
-        Text(engineStatus, color = Coral.ContentSecondary, fontSize = 12.sp)
+        CircularProgressIndicator(color = Coral.Accent, strokeWidth = 2.dp, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.height(18.dp))
+        Text("正在接入抖音", color = Coral.Content, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(6.dp))
+        Text("$engineState · $engineStatus", color = Coral.ContentSecondary, fontSize = 12.sp)
         error?.let {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             Text(it, color = Coral.Danger, fontSize = 12.sp)
-            Spacer(Modifier.height(10.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        if (tail.isNotEmpty()) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 190.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Coral.Surface)
+                    .padding(12.dp),
+            ) {
+                Text(tail, color = Coral.ContentSecondary, fontSize = 10.sp, lineHeight = 14.sp)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Pill(text = "重试", modifier = Modifier.clickable { onRetry() })
+            Pill(
+                text = "复制诊断",
+                modifier = Modifier.clickable {
+                    val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("diag", Diag.dump()))
+                    Diag.flush(context)
+                    Toast.makeText(context, "诊断已复制", Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 }
