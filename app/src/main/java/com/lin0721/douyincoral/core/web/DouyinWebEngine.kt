@@ -165,23 +165,31 @@ class DouyinWebEngine(private val appContext: Context) {
                 tries++
                 if (tries % 8 == 0) inject(force = true)
                 wv.evaluateJavascript(PROBE_JS) { result ->
-                    val text = result?.trim()?.trim('"') ?: ""
-                    Diag.log(TAG, "probe#$tries=$text", appContext)
+                    val info = runCatching { JSONObject(result ?: "{}") }.getOrNull()
+                    val glue = info?.optInt("r") == 1
+                    val ac = info?.optBoolean("ac") == true
+                    val patched = info?.optBoolean("patched") == true
+                    Diag.log(
+                        TAG,
+                        "probe#$tries glue=$glue ac=$ac patched=$patched ready=${info?.optString("ready")} " +
+                            "href=${info?.optString("href")} js=${info?.optJSONArray("js")?.length() ?: 0} " +
+                            "env=${info?.optBoolean("envUrl")} ttwid=${info?.optBoolean("ttwid")} " +
+                            "nonce=${info?.optBoolean("nonce")} body=${info?.optString("body")}",
+                        appContext,
+                    )
                     when {
-                        text.startsWith("1") -> {
-                            hasSigner = true
+                        !glue && tries < 120 -> main.postDelayed(this, 1000)
+                        glue && (ac || patched) -> {
+                            hasSigner = ac
                             _state.value = State.READY
-                            _status.value = "就绪"
-                            Diag.log(TAG, "ready with signer", appContext)
+                            _status.value = if (ac) "就绪" else "就绪（借页面签名）"
+                            Diag.log(TAG, "ready ac=$ac patched=$patched", appContext)
                             Diag.flush(appContext)
                         }
-                        text.startsWith("2") -> {
-                            hasSigner = false
-                            if (!announced) {
-                                announced = true
-                                _state.value = State.READY
-                                _status.value = "页面已就绪，正在等签名器"
-                            }
+                        glue && !announced -> {
+                            announced = true
+                            _state.value = State.READY
+                            _status.value = "页面已就绪，正在等签名器"
                             if (tries < 120) main.postDelayed(this, 1000)
                         }
                         tries >= 120 -> {
@@ -190,7 +198,11 @@ class DouyinWebEngine(private val appContext: Context) {
                             Diag.log(TAG, "give up waiting signer", appContext)
                             Diag.flush(appContext)
                         }
-                        else -> main.postDelayed(this, 1000)
+                        else -> {
+                            // 页面自己也不动，轻推一下逼它发请求
+                            if (tries % 3 == 0) wv.evaluateJavascript(NUDGE_JS, null)
+                            main.postDelayed(this, 1000)
+                        }
                     }
                 }
             }
@@ -317,10 +329,11 @@ class DouyinWebEngine(private val appContext: Context) {
         // 1 = 页面胶水与签名器都在；2 = 只有胶水；xx = 还没注入
         const val PROBE_JS =
             "(function(){try{" +
-                "var glue=typeof window.__mcRpc==='function';" +
-                "var ac=!!(window.byted_acrawler||(window.bdms&&window.bdms.acrawler));" +
-                "return glue&&ac?'1':(glue?'2':'0');" +
-                "}catch(e){return 'xx';}})()"
+                "if(typeof window.__mcInfo==='function'){return window.__mcInfo();}" +
+                "return {r:0,ac:false,patched:false};" +
+                "}catch(e){return {r:-1,e:String(e)};}})()"
+
+        const val NUDGE_JS = "(function(){try{return window.__mcNudge?window.__mcNudge():false;}catch(e){return false;}})()"
     }
 }
 

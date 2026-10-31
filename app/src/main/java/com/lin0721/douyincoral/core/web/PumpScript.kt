@@ -3,9 +3,10 @@ package com.lin0721.douyincoral.core.web
 /**
  * 注入到抖音网页里的胶水脚本。
  *
- * 为什么要在网页里跑：抖音 web 的每个接口都要求 a_bogus 签名，而签名函数就在页面自己的
- * JS 里（byted_acrawler.frontierSign）。与其逆向算法、天天跟着更新，不如把网页当成签名器，
- * 我们在页面上下文里拼好 URL、借它的函数签名、用它的 Cookie 发请求，再把 JSON 交回原生层。
+ * 关键判断（真机日志逼出来的）：抖音的签名器 webmssdk 把虚拟机放在 Worker 里，
+ * 主线程上根本没有 window.byted_acrawler，它对外只表现为「patch 掉 window.fetch」。
+ * 所以正确的用法不是找签名函数自己算 a_bogus，而是用页面当前那个 fetch ——
+ * 它会在发请求时自己补签名。只有页面还没被 patch 时，才退回手动签名。
  */
 internal object PumpScript {
 
@@ -40,6 +41,34 @@ internal object PumpScript {
       if (b && (typeof b.frontierSign === 'function' || typeof b.sign === 'function')) { return b; }
     } catch (e) { }
     return null;
+  }
+
+  var origFetch = window.fetch;
+  var origIsNative = true;
+  try { origIsNative = /native code/.test(Function.prototype.toString.call(origFetch)); } catch (e) { }
+
+  function myFetch(input, init) {
+    var url = '';
+    try { url = (typeof input === 'string') ? input : ((input && input.url) || ''); } catch (e) { }
+    noteEnv(url);
+    return origFetch.apply(this, arguments);
+  }
+
+  /** 页面自己的签名器是否接管了 fetch（被后来的实现覆盖 = 被接管） */
+  function signerPatched() {
+    try {
+      if (window.fetch !== myFetch) { return true; }
+      if (!origIsNative) { return true; }
+    } catch (e) { }
+    return false;
+  }
+
+  /** 当前真正该用的 fetch：被接管了就用它（自带签名），否则用原始那个 */
+  function currentFetch() {
+    try {
+      if (signerPatched()) { return window.fetch; }
+    } catch (e) { }
+    return origFetch;
   }
 
   function applySign(u, res) {
@@ -84,10 +113,6 @@ internal object PumpScript {
           var v = p.get(ENV_KEYS[i]);
           if (v) { u.searchParams.set(ENV_KEYS[i], v); }
         }
-        if (!u.searchParams.get('webid')) {
-          var w = p.get('webid');
-          if (w) { u.searchParams.set('webid', w); }
-        }
       }
     } catch (e) { }
   }
@@ -116,13 +141,7 @@ internal object PumpScript {
     } catch (e) { return false; }
   }
 
-  var origFetch = window.fetch;
-  window.fetch = function (input, init) {
-    var url = '';
-    try { url = (typeof input === 'string') ? input : ((input && input.url) || ''); } catch (e) { }
-    noteEnv(url);
-    return origFetch.apply(this, arguments);
-  };
+  window.fetch = myFetch;
 
   var XO = XMLHttpRequest.prototype.open;
   var XS = XMLHttpRequest.prototype.send;
@@ -162,34 +181,80 @@ internal object PumpScript {
         }
       } catch (e) { }
       applyCommon(u);
-      if (verb === 'GET' && !sign(u)) {
-        attempt++;
-        if (attempt < 30) { setTimeout(go, 400); return; }
-        post({ type: 'rpc', id: id, ok: false, err: 'sign-unavailable' });
-        return;
+
+      var patched = signerPatched();
+      if (verb === 'GET' && !patched) {
+        if (!sign(u)) {
+          attempt++;
+          if (attempt < 40) { setTimeout(go, 500); return; }
+          post({ type: 'rpc', id: id, ok: false, err: 'sign-unavailable' });
+          return;
+        }
       }
+
       var init = { method: verb, credentials: 'include', headers: { 'accept': 'application/json, text/plain, */*' } };
       if (verb === 'POST') {
         init.headers['content-type'] = 'application/x-www-form-urlencoded';
         init.body = body || '';
       }
-      origFetch.call(window, u.toString(), init).then(function (r) {
-        return r.text().then(function (t) {
-          post({ type: 'rpc', id: id, ok: true, status: r.status, body: t });
+      var f = currentFetch();
+      try {
+        f.call(window, u.toString(), init).then(function (r) {
+          return r.text().then(function (t) {
+            post({ type: 'rpc', id: id, ok: true, status: r.status, signed: patched, body: t });
+          });
+        }).catch(function (e) {
+          post({ type: 'rpc', id: id, ok: false, err: String(e) });
         });
-      }).catch(function (e) {
+      } catch (e) {
         post({ type: 'rpc', id: id, ok: false, err: String(e) });
-      });
+      }
     }
 
     go();
   };
 
+  /** 给原生层看的现场快照 */
+  window.__mcInfo = function () {
+    var out = {
+      r: (typeof window.__mcRpc === 'function') ? 1 : 0,
+      ac: !!acrawler(),
+      patched: signerPatched(),
+      ready: String(document.readyState || ''),
+      href: String(location.href || ''),
+      scripts: (document.scripts ? document.scripts.length : 0),
+      js: [],
+      envUrl: !!window.__mcEnvUrl,
+      nonce: !!window.__ac_nonce,
+      body: (document.body ? String(document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 70) : ''),
+      ttwid: !!cookie('ttwid'),
+      msToken: !!cookie('msToken')
+    };
+    try {
+      var e = performance.getEntriesByType('resource');
+      for (var i = 0; i < e.length; i++) {
+        var n = e[i].name || '';
+        if (n.indexOf('.js') >= 0) { out.js.push(n.slice(-48)); }
+      }
+      out.js = out.js.slice(-6);
+    } catch (x) { }
+    return out;
+  };
+
+  /** 页面自己不动，就轻推它一把，逼它去请求推荐流 */
+  window.__mcNudge = function () {
+    try {
+      window.scrollBy(0, 320);
+      window.dispatchEvent(new Event('scroll'));
+      var v = document.querySelector('video');
+      if (v) { v.dispatchEvent(new Event('mouseover', { bubbles: true })); }
+      return true;
+    } catch (e) { return false; }
+  };
+
   window.__mcSignDiagnose = function () {
     var ac = acrawler();
-    var out = { signer: !!ac, cookieTtwid: !!cookie('ttwid'), cookieMsToken: !!cookie('msToken') };
-    try { out.hasFrontier = !!(ac && ac.frontierSign); } catch (e) { }
-    post({ type: 'diag', body: JSON.stringify(out) });
+    post({ type: 'diag', body: JSON.stringify({ signer: !!ac, patched: signerPatched() }) });
   };
 
   post({ type: 'boot' });
