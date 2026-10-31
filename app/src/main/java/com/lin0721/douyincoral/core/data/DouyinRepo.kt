@@ -43,15 +43,23 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun comments(awemeId: String, cursor: Long = 0L, count: Int = 20): CommentPage {
-        val json = engine.request(
-            "/aweme/v1/web/comment/list/",
-            webParams + mapOf(
-                "aweme_id" to awemeId,
-                "cursor" to cursor,
-                "count" to count,
-                "item_type" to 0,
-            ),
+        val params = webParams + mapOf(
+            "aweme_id" to awemeId,
+            "cursor" to cursor,
+            "count" to count,
+            "item_type" to 0,
         )
+        var json = engine.request("/aweme/v1/web/comment/list/", params)
+        if (json.length() == 0 || json.optJSONArray("comments") == null) {
+            // 空 body 是风控的典型回法，换 POST 再试一次
+            json = engine.request(
+                "/aweme/v1/web/comment/list/",
+                params,
+                method = "POST",
+                body = params.entries.joinToString("&") { "${it.key}=${it.value}" },
+            )
+        }
+        if (json.length() == 0) throw DouyinException("评论被抖音拦了，过一会儿再试")
         checkStatus(json)
         return AwemeParser.parseComments(json)
     }

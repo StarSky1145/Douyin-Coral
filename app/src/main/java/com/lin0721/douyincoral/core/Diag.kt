@@ -57,17 +57,17 @@ object Diag {
             resolver.query(
                 collection,
                 arrayOf(MediaStore.Downloads._ID),
-                "${MediaStore.Downloads.DISPLAY_NAME}=?",
-                arrayOf(FILE_NAME),
+                "${MediaStore.Downloads.DISPLAY_NAME} LIKE ?",
+                arrayOf("chaodian-diag%"),
                 null,
             )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val id = cursor.getLong(0)
-                    resolver.delete(
-                        collection.buildUpon().appendPath(id.toString()).build(),
-                        null,
-                        null,
-                    )
+                val ids = buildList {
+                    while (cursor.moveToNext()) add(cursor.getLong(0))
+                }
+                ids.forEach { id ->
+                    runCatching {
+                        resolver.delete(collection.buildUpon().appendPath(id.toString()).build(), null, null)
+                    }
                 }
             }
         }

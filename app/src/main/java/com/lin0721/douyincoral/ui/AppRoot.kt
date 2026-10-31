@@ -68,6 +68,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.lin0721.douyincoral.core.Diag
+import com.lin0721.douyincoral.core.data.CdnProbe
 import com.lin0721.douyincoral.core.data.DouyinRepo
 import com.lin0721.douyincoral.core.data.VideoDownloader
 import com.lin0721.douyincoral.core.model.Aweme
@@ -214,7 +215,8 @@ fun AppRoot() {
                     toast("开始下载…")
                     scope.launch {
                         runCatching {
-                            downloader.download(aweme.video.playUrl, aweme.desc.ifBlank { aweme.id })
+                            val url = CdnProbe.resolve(aweme.id, aweme.video)
+                            downloader.download(url, aweme.desc.ifBlank { aweme.id })
                         }.onSuccess { toast(it) }.onFailure { toast(it.message ?: "下载失败") }
                     }
                 },
@@ -342,10 +344,14 @@ private fun FeedPager(
     val pagerState = rememberPagerState(pageCount = { items.size })
 
     val player = remember {
+        val headers = buildMap {
+            put("Referer", "https://www.douyin.com/")
+            put("User-Agent", CdnProbe.UA)
+            val cookie = CdnProbe.cookie()
+            if (cookie.isNotEmpty()) put("Cookie", cookie)
+        }
         val http = DefaultHttpDataSource.Factory()
-            .setDefaultRequestProperties(
-                mapOf("Referer" to "https://www.douyin.com/", "User-Agent" to UA),
-            )
+            .setDefaultRequestProperties(headers)
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(http))
             .build()
@@ -355,10 +361,15 @@ private fun FeedPager(
 
     LaunchedEffect(pagerState.currentPage, items.size) {
         val item = items.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
-        if (item.video.playUrl.isNotEmpty()) {
-            player.setMediaItem(MediaItem.fromUri(item.video.playUrl))
-            player.prepare()
-            player.playWhenReady = true
+        if (item.video.playUrl.isNotEmpty() || item.video.playUrls.isNotEmpty()) {
+            // CDN 有多条线路，先探通再播，避免直接吃到 403
+            val playable = CdnProbe.resolve(item.id, item.video)
+            if (playable.isNotEmpty()) {
+                Diag.log("Play", "play ${item.id} ${playable.take(90)}")
+                player.setMediaItem(MediaItem.fromUri(playable))
+                player.prepare()
+                player.playWhenReady = true
+            }
         }
         if (items.size - pagerState.currentPage <= 2 && hasMore && !loading) onLoadMore()
     }

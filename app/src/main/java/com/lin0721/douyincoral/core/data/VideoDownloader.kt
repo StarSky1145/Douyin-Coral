@@ -24,9 +24,11 @@ class VideoDownloader(private val context: Context) {
             connectTimeout = 20_000
             readTimeout = 60_000
             instanceFollowRedirects = true
-            setRequestProperty("User-Agent", UA)
+            setRequestProperty("User-Agent", CdnProbe.UA)
             setRequestProperty("Referer", "https://www.douyin.com/")
             setRequestProperty("Accept", "*/*")
+            val cookie = CdnProbe.cookie()
+            if (cookie.isNotEmpty()) setRequestProperty("Cookie", cookie)
         }
         try {
             if (conn.responseCode !in 200..299) {
@@ -67,8 +69,4 @@ class VideoDownloader(private val context: Context) {
         return cleaned.take(60).ifBlank { "douyin_${System.currentTimeMillis()}" }
     }
 
-    private companion object {
-        const val UA =
-            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-    }
 }

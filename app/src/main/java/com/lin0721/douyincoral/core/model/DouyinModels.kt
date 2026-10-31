@@ -20,6 +20,10 @@ data class VideoInfo(
     val durationMs: Long,
     val width: Int,
     val height: Int,
+    /** play_addr / bit_rate / h264 的所有候选直链，CDN 会挑线路，得挨个试 */
+    val playUrls: List<String> = emptyList(),
+    /** video_id，用来兜底走 aweme.snssdk.com 的播放接口 */
+    val uri: String = "",
 ) {
     val aspectRatio: Float
         get() = if (height > 0 && width > 0) width.toFloat() / height.toFloat() else 9f / 16f
@@ -132,23 +136,22 @@ object AwemeParser {
         val id = json.str("aweme_id")
         if (id.isEmpty()) return null
         val video = json.obj("video")
-        val playList = video?.obj("play_addr")?.optJSONArray("url_list")
-        var playUrl = ""
-        if (playList != null) {
-            for (i in 0 until playList.length()) {
-                val u = playList.optString(i, "")
-                if (u.isNotEmpty()) {
-                    playUrl = u
-                    break
-                }
+        val playAddr = video?.obj("play_addr")
+        val candidates = LinkedHashSet<String>()
+        fun collect(obj: JSONObject?) {
+            val list = obj?.optJSONArray("url_list") ?: return
+            for (i in 0 until list.length()) {
+                val u = list.optString(i, "").replace("playwm", "play")
+                if (u.startsWith("http")) candidates.add(u)
             }
         }
-        if (playUrl.isEmpty()) {
-            val rates = video?.optJSONArray("bit_rate")
-            if (rates != null && rates.length() > 0) {
-                playUrl = rates.optJSONObject(0)?.firstUrl("play_addr") ?: ""
-            }
+        collect(playAddr)
+        collect(video?.obj("play_addr_h264"))
+        val rates = video?.optJSONArray("bit_rate")
+        if (rates != null) {
+            for (i in 0 until rates.length()) collect(rates.optJSONObject(i)?.obj("play_addr"))
         }
+        val playUrl = candidates.firstOrNull().orEmpty()
         val images = json.optJSONArray("images")?.let { arr ->
             buildList {
                 for (i in 0 until arr.length()) {
@@ -168,8 +171,10 @@ object AwemeParser {
                 playUrl = playUrl.replace("playwm", "play"),
                 cover = video?.firstUrl("cover") ?: json.firstUrl("video_cover"),
                 durationMs = video?.long("duration") ?: 0L,
-                width = video?.obj("play_addr")?.optInt("width", 0) ?: 0,
-                height = video?.obj("play_addr")?.optInt("height", 0) ?: 0,
+                width = playAddr?.optInt("width", 0) ?: 0,
+                height = playAddr?.optInt("height", 0) ?: 0,
+                playUrls = candidates.toList(),
+                uri = playAddr?.str("uri").orEmpty().ifEmpty { video?.str("vid").orEmpty() },
             ),
             images = images,
             diggCount = stats?.long("digg_count") ?: 0L,

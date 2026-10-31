@@ -259,14 +259,26 @@ class DouyinWebEngine(private val appContext: Context) {
                 val id = obj.optString("id")
                 val p = pending.remove(id) ?: return
                 main.removeCallbacks(p.timer)
-                Diag.log(TAG, "rpc-done ${obj.optBoolean("ok")} ${obj.optString("err")} ${obj.optString("body").take(120)}", appContext)
+                Diag.log(
+                    TAG,
+                    "rpc-done ok=${obj.optBoolean("ok")} signed=${obj.optBoolean("signed")} " +
+                        "status=${obj.optInt("status")} err=${obj.optString("err")} " +
+                        "len=${obj.optString("body").length} head=${obj.optString("body").take(90)}",
+                    appContext,
+                )
                 if (obj.optBoolean("ok")) {
                     val text = obj.optString("body")
-                    val json = try {
-                        JSONObject(text)
-                    } catch (e: Exception) {
-                        p.deferred.completeExceptionally(DouyinException("返回不是 JSON"))
-                        return
+                    val json = if (text.isBlank()) {
+                        JSONObject()  // 风控会回 200 + 空 body，交给上层决定是否重试
+                    } else {
+                        try {
+                            JSONObject(text)
+                        } catch (e: Exception) {
+                            p.deferred.completeExceptionally(
+                                DouyinException("接口返回了网页而不是数据（多半被风控）：${text.take(60)}"),
+                            )
+                            return
+                        }
                     }
                     p.deferred.complete(json)
                 } else {
