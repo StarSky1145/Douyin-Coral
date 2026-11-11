@@ -135,7 +135,6 @@ fun AppRoot() {
             } else {
                 HomeTab(
                     items = items,
-                    active = tab == AppTab.Home,
                     hasMore = hasMore,
                     loading = loading,
                     me = me,
