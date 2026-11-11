@@ -24,28 +24,27 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lin0721.douyincoral.core.Diag
 import com.lin0721.douyincoral.core.data.CdnProbe
+import com.lin0721.douyincoral.core.data.DouyinClient
 import com.lin0721.douyincoral.core.data.DouyinRepo
 import com.lin0721.douyincoral.core.data.VideoDownloader
 import com.lin0721.douyincoral.core.model.Aweme
-import com.lin0721.douyincoral.core.model.AwemeParser
 import com.lin0721.douyincoral.core.model.Profile
-import com.lin0721.douyincoral.core.web.DouyinWebEngine
+import com.lin0721.douyincoral.core.session.CookieStore
+import com.lin0721.douyincoral.core.sign.SignEngine
 import com.lin0721.douyincoral.ui.home.HomeTab
 import com.lin0721.douyincoral.ui.home.ShareSheet
 import com.lin0721.douyincoral.ui.me.MeTab
@@ -60,17 +59,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppRoot() {
     val context = LocalContext.current
-    val engine = remember { DouyinWebEngine(context.applicationContext) }
-    val repo = remember { DouyinRepo(engine) }
+    val cookies = remember { CookieStore(context.applicationContext) }
+    val signer = remember { SignEngine(context.applicationContext) }
+    val client = remember { DouyinClient(context.applicationContext, cookies, signer) }
+    val repo = remember { DouyinRepo(client) }
     val downloader = remember { VideoDownloader(context.applicationContext) }
     val scope = rememberCoroutineScope()
 
-    val engineState by engine.state.collectAsStateWithLifecycle()
-    val engineStatus by engine.status.collectAsStateWithLifecycle()
-
     var tab by remember { mutableStateOf(AppTab.Home) }
     var items by remember { mutableStateOf<List<Aweme>>(emptyList()) }
-    var cursor by remember { mutableStateOf(0L) }
+    var cursor by remember { mutableLongStateOf(0L) }
     var hasMore by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -108,53 +106,30 @@ fun AppRoot() {
         }
     }
 
-    LaunchedEffect(engineState) {
-        if (engineState == DouyinWebEngine.State.READY && items.isEmpty() && !loading) {
-            refreshSelf()
-            loadMore()
-        }
-    }
-
-    // 页面自己拉到的推荐流，直接截下来用：这条路完全不依赖我们的签名
-    DisposableEffect(engine) {
-        engine.onCapture = { url, body ->
-            val interesting = url.contains("/tab/feed/") || url.contains("/aweme/post/")
-            if (interesting && body.contains("aweme_list")) {
-                scope.launch {
-                    val parsed = runCatching {
-                        AwemeParser.parseFeed(org.json.JSONObject(body))
-                    }.getOrNull()
-                    if (parsed != null && parsed.items.isNotEmpty()) {
-                        items = (items + parsed.items).distinctBy { it.id }
-                        if (parsed.cursor > 0) cursor = parsed.cursor
-                        hasMore = parsed.hasMore
-                    }
-                }
-            }
-        }
-        onDispose { engine.onCapture = null }
+    // 启动链路：把网页登录态搬下来 → 自检签名器 → 拉首页数据
+    LaunchedEffect(Unit) {
+        cookies.syncFromWebView()
+        Diag.log("AppRoot", cookies.summary(), context)
+        signer.selfCheck()
+        refreshSelf()
+        loadMore()
     }
 
     DisposableEffect(Unit) {
-        onDispose { engine.destroy() }
+        onDispose { signer.close() }
     }
 
     Column(Modifier.fillMaxSize().background(Dy.Background)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            // 数据泵：真实渲染、几乎不可见
-            AndroidView(
-                factory = { ctx -> engine.createView(ctx) },
-                modifier = Modifier.fillMaxSize().alpha(0.01f),
-            )
-
             when (tab) {
                 AppTab.Home -> {
                     if (items.isEmpty()) {
                         LoadingScreen(
-                            engineState = engineState.name,
-                            engineStatus = engineStatus,
+                            status = if (loading) "正在加载推荐…" else "正在连接抖音接口…",
                             error = loadError,
+                            loggedIn = cookies.hasLogin,
                             onRetry = { scope.launch { loadMore() } },
+                            onLogin = { showLogin = true },
                         )
                     } else {
                         HomeTab(
@@ -250,8 +225,8 @@ fun AppRoot() {
             onDismiss = { showLogin = false },
             onFinished = {
                 showLogin = false
+                cookies.syncFromWebView()
                 scope.launch {
-                    engine.reload()
                     refreshSelf()
                     items = emptyList()
                     cursor = 0L
@@ -305,10 +280,11 @@ fun AppRoot() {
 
 @Composable
 private fun LoadingScreen(
-    engineState: String,
-    engineStatus: String,
+    status: String,
     error: String?,
+    loggedIn: Boolean,
     onRetry: () -> Unit,
+    onLogin: () -> Unit,
 ) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
@@ -333,7 +309,7 @@ private fun LoadingScreen(
         Spacer(Modifier.height(18.dp))
         Text("正在接入抖音", color = Dy.Content, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
-        Text("$engineState · $engineStatus", color = Dy.ContentSecondary, fontSize = 12.sp)
+        Text(status, color = Dy.ContentSecondary, fontSize = 12.sp)
         error?.let {
             Spacer(Modifier.height(12.dp))
             Text(it, color = Dy.Danger, fontSize = 12.sp)
@@ -354,6 +330,9 @@ private fun LoadingScreen(
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Pill(text = "重试", modifier = Modifier.clickable { onRetry() })
+            if (!loggedIn) {
+                Pill(text = "登录", modifier = Modifier.clickable { onLogin() })
+            }
             Pill(
                 text = "复制诊断",
                 modifier = Modifier.clickable {

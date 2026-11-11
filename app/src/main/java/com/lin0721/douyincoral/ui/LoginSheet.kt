@@ -39,18 +39,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.lin0721.douyincoral.core.DouyinEnv
+import com.lin0721.douyincoral.core.session.CookieStore
 import com.lin0721.douyincoral.ui.theme.Dy
 import kotlinx.coroutines.delay
-
-/** 手机网页版不提供登录入口，用桌面版 UA 才能看到「登录」。 */
-private const val DESKTOP_UA =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 /**
  * 内嵌网页登录：直接把抖音网页版塞进 WebView。
  *
  * 短信验证码、滑块、异地风控全交给真正的网页去处理——我们只等 Cookie 里出现
- * sessionid / sid_tt 就当登录成功，然后把整组 Cookie 交给数据泵复用。
+ * sessionid / sid_tt 就当登录成功；随后的 [CookieStore.syncFromWebView] 会把整组
+ * Cookie 搬给 OkHttp 复用。
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -66,7 +65,7 @@ fun LoginSheet(
         cm.setAcceptCookie(true)
         while (!loggedIn) {
             delay(600)
-            val cookie = cm.getCookie("https://www.douyin.com") ?: ""
+            val cookie = cm.getCookie(DouyinEnv.HOME_URL) ?: ""
             if (cookie.contains("sessionid=") && cookie.contains("sid_tt=")) loggedIn = true
         }
     }
@@ -91,7 +90,7 @@ fun LoginSheet(
                         mediaPlaybackRequiresUserGesture = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                         mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        userAgentString = DESKTOP_UA
+                        userAgentString = DouyinEnv.USER_AGENT
                         useWideViewPort = true
                         loadWithOverviewMode = true
                         setSupportZoom(true)
@@ -104,7 +103,7 @@ fun LoginSheet(
                             loading = false
                         }
                     }
-                    loadUrl("https://www.douyin.com/")
+                    loadUrl(DouyinEnv.HOME_URL)
                 }
             },
         )

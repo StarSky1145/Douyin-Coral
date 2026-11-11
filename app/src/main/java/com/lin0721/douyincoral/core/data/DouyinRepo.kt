@@ -1,31 +1,24 @@
 package com.lin0721.douyincoral.core.data
 
+import com.lin0721.douyincoral.core.DouyinException
 import com.lin0721.douyincoral.core.model.Aweme
 import com.lin0721.douyincoral.core.model.AwemeParser
 import com.lin0721.douyincoral.core.model.CommentPage
 import com.lin0721.douyincoral.core.model.FeedPage
 import com.lin0721.douyincoral.core.model.Profile
-import com.lin0721.douyincoral.core.web.DouyinException
-import com.lin0721.douyincoral.core.web.DouyinWebEngine
 import org.json.JSONObject
 import java.net.URLEncoder
 
 /**
- * 业务接口层。所有请求都从网页上下文发出去（签名、Cookie 都由页面负责），
+ * 业务接口层。请求交给 [DouyinClient]（Cookie、签名、UA 都在那边处理），
  * 这里只负责拼参数、把 JSON 变成模型。
  */
-class DouyinRepo(private val engine: DouyinWebEngine) {
-
-    private val webParams = linkedMapOf<String, Any?>(
-        "device_platform" to "webapp",
-        "aid" to "6383",
-        "channel" to "channel_pc_web",
-    )
+class DouyinRepo(private val client: DouyinClient) {
 
     suspend fun feed(count: Int = 8, cursor: Long = 0L): FeedPage {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/tab/feed/",
-            webParams + mapOf(
+            mapOf(
                 "count" to count,
                 "refresh_index" to 1,
                 "video_type_select" to 1,
@@ -43,9 +36,9 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun search(keyword: String, offset: Long = 0L, count: Int = 10): FeedPage {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/general/search/single/",
-            webParams + mapOf(
+            mapOf(
                 "keyword" to keyword,
                 "search_channel" to "aweme_general",
                 "search_source" to "normal_search",
@@ -60,16 +53,16 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun comments(awemeId: String, cursor: Long = 0L, count: Int = 20): CommentPage {
-        val params = webParams + mapOf(
+        val params = mapOf(
             "aweme_id" to awemeId,
             "cursor" to cursor,
             "count" to count,
             "item_type" to 0,
         )
-        var json = engine.request("/aweme/v1/web/comment/list/", params)
+        var json = client.request("/aweme/v1/web/comment/list/", params)
         if (json.length() == 0 || json.optJSONArray("comments") == null) {
             // 空 body 是风控的典型回法，换 POST 再试一次
-            json = engine.request(
+            json = client.request(
                 "/aweme/v1/web/comment/list/",
                 params,
                 method = "POST",
@@ -83,9 +76,9 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
 
     suspend fun publishComment(awemeId: String, text: String): Boolean {
         val body = "aweme_id=$awemeId&text=${URLEncoder.encode(text, "UTF-8")}&comment_id=0&text_extra=%5B%5D"
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/comment/publish/",
-            webParams,
+            emptyMap(),
             method = "POST",
             body = body,
             timeoutMs = 25_000L,
@@ -95,29 +88,29 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun like(awemeId: String, like: Boolean) {
-        val json = engine.request(
+        val type = if (like) 1 else 0
+        val json = client.request(
             "/aweme/v1/web/commit/item/digg/",
-            webParams + mapOf("aweme_id" to awemeId, "type" to if (like) 1 else 0),
+            mapOf("aweme_id" to awemeId, "type" to type),
             method = "POST",
-            body = "aweme_id=$awemeId&type=${if (like) 1 else 0}",
+            body = "aweme_id=$awemeId&type=$type",
         )
         checkStatus(json)
     }
 
     suspend fun collect(awemeId: String, collect: Boolean) {
         val action = if (collect) 1 else 0
-        val body = "aweme_id=$awemeId&action=$action"
         // 官方包里收藏走 /aweme/v1/aweme/collect/，网页端对应路径是 /aweme/v1/web/aweme/collect/；
         // 老的 /commit/item/collect/ 在新版本里已经不认了，留作兜底。
         val paths = listOf("/aweme/v1/web/aweme/collect/", "/aweme/v1/web/commit/item/collect/")
         var last: Exception? = null
         for (path in paths) {
             try {
-                val json = engine.request(
+                val json = client.request(
                     path,
-                    webParams + mapOf("aweme_id" to awemeId, "action" to action),
+                    mapOf("aweme_id" to awemeId, "action" to action),
                     method = "POST",
-                    body = body,
+                    body = "aweme_id=$awemeId&action=$action",
                 )
                 checkStatus(json)
                 return
@@ -129,39 +122,36 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun follow(userId: String, secUid: String, follow: Boolean) {
-        val json = engine.request(
+        val type = if (follow) 1 else 0
+        val json = client.request(
             "/aweme/v1/web/commit/follow/user/",
-            webParams + mapOf(
-                "user_id" to userId,
-                "sec_user_id" to secUid,
-                "type" to if (follow) 1 else 0,
-            ),
+            mapOf("user_id" to userId, "sec_user_id" to secUid, "type" to type),
             method = "POST",
-            body = "user_id=$userId&sec_user_id=$secUid&type=${if (follow) 1 else 0}",
+            body = "user_id=$userId&sec_user_id=$secUid&type=$type",
         )
         checkStatus(json)
     }
 
     suspend fun selfProfile(): Profile? {
         val json = runCatching {
-            engine.request("/aweme/v1/web/user/profile/self/", webParams, timeoutMs = 15_000L)
+            client.request("/aweme/v1/web/user/profile/self/", emptyMap(), timeoutMs = 15_000L)
         }.getOrNull() ?: return null
         return AwemeParser.parseProfile(json)
     }
 
     suspend fun userProfile(secUid: String): Profile? {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/user/profile/other/",
-            webParams + mapOf("sec_user_id" to secUid, "publish_video_strategy_type" to 2),
+            mapOf("sec_user_id" to secUid, "publish_video_strategy_type" to 2),
         )
         checkStatus(json)
         return AwemeParser.parseProfile(json)
     }
 
     suspend fun userPosts(secUid: String, cursor: Long = 0L, count: Int = 18): FeedPage {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/aweme/post/",
-            webParams + mapOf(
+            mapOf(
                 "sec_user_id" to secUid,
                 "max_cursor" to cursor,
                 "count" to count,
@@ -174,27 +164,27 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
     }
 
     suspend fun favorites(cursor: Long = 0L, count: Int = 18): FeedPage {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/aweme/collect/",
-            webParams + mapOf("cursor" to cursor, "count" to count),
+            mapOf("cursor" to cursor, "count" to count),
         )
         checkStatus(json)
         return AwemeParser.parseFeed(json)
     }
 
     suspend fun liked(cursor: Long = 0L, count: Int = 18): FeedPage {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/aweme/favorite/",
-            webParams + mapOf("max_cursor" to cursor, "count" to count),
+            mapOf("max_cursor" to cursor, "count" to count),
         )
         checkStatus(json)
         return AwemeParser.parseFeed(json)
     }
 
     suspend fun detail(awemeId: String): Aweme? {
-        val json = engine.request(
+        val json = client.request(
             "/aweme/v1/web/aweme/detail/",
-            webParams + mapOf("aweme_id" to awemeId),
+            mapOf("aweme_id" to awemeId),
         )
         checkStatus(json)
         val obj = json.optJSONObject("aweme_detail") ?: return null
@@ -205,10 +195,12 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
         val code = json.optInt("status_code", 0)
         if (code != 0) {
             val msg = json.optString("status_msg").ifBlank { "status_code=$code" }
-            throw DouyinException(when {
-                msg.contains("login", true) || code == 8 -> "需要登录后才能操作"
-                else -> msg
-            })
+            throw DouyinException(
+                when {
+                    msg.contains("login", true) || code == 8 -> "需要登录后才能操作"
+                    else -> msg
+                },
+            )
         }
     }
 }
