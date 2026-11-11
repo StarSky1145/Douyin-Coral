@@ -122,88 +122,85 @@ fun AppRoot() {
 
     Column(Modifier.fillMaxSize().background(Dy.Background)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (tab) {
-                AppTab.Home -> {
-                    if (items.isEmpty()) {
-                        LoadingScreen(
-                            status = if (loading) "正在加载推荐…" else "正在连接抖音接口…",
-                            error = loadError,
-                            loggedIn = cookies.hasLogin,
-                            onRetry = { scope.launch { loadMore() } },
-                            onLogin = { showLogin = true },
-                        )
-                    } else {
-                        HomeTab(
-                            items = items,
-                            hasMore = hasMore,
-                            loading = loading,
-                            me = me,
-                            followedIds = followedIds,
-                            onLoadMore = { scope.launch { loadMore() } },
-                            onOpenProfile = { author ->
-                                profileSecUid = author.secUid
-                                profileTitle = author.nickname
-                            },
-                            onOpenComments = { commentsFor = it },
-                            onToggleLike = { aweme, liked ->
-                                items = items.map { if (it.id == aweme.id) it.copy(liked = liked) else it }
-                                scope.launch {
-                                    runCatching { repo.like(aweme.id, liked) }
-                                        .onFailure {
-                                            items = items.map { item ->
-                                                if (item.id == aweme.id) item.copy(liked = !liked) else item
-                                            }
-                                            toast(it.message ?: "点赞失败")
-                                        }
+            // 首页常驻：切页签不销毁翻页器，回来还停在原视频
+            Box(Modifier.fillMaxSize().alpha(if (tab == AppTab.Home) 1f else 0f)) {
+            if (items.isEmpty()) {
+                LoadingScreen(
+                    status = if (loading) "正在加载推荐…" else "正在连接抖音接口…",
+                    error = loadError,
+                    loggedIn = cookies.hasLogin,
+                    onRetry = { scope.launch { loadMore() } },
+                    onLogin = { showLogin = true },
+                )
+            } else {
+                HomeTab(
+                    items = items,
+                    hasMore = hasMore,
+                    loading = loading,
+                    me = me,
+                    followedIds = followedIds,
+                    onLoadMore = { scope.launch { loadMore() } },
+                    onOpenProfile = { author ->
+                        profileSecUid = author.secUid
+                        profileTitle = author.nickname
+                    },
+                    onOpenComments = { commentsFor = it },
+                    onToggleLike = { aweme, liked ->
+                        items = items.map { if (it.id == aweme.id) it.copy(liked = liked) else it }
+                        scope.launch {
+                            runCatching { repo.like(aweme.id, liked) }
+                                .onFailure {
+                                    items = items.map { item ->
+                                        if (item.id == aweme.id) item.copy(liked = !liked) else item
+                                    }
+                                    toast(it.message ?: "点赞失败")
                                 }
-                            },
-                            onToggleCollect = { aweme, collected ->
-                                items = items.map { if (it.id == aweme.id) it.copy(collected = collected) else it }
-                                scope.launch {
-                                    runCatching { repo.collect(aweme.id, collected) }
-                                        .onFailure {
-                                            items = items.map { item ->
-                                                if (item.id == aweme.id) item.copy(collected = !collected) else item
-                                            }
-                                            toast(it.message ?: "收藏失败")
-                                        }
+                        }
+                    },
+                    onToggleCollect = { aweme, collected ->
+                        items = items.map { if (it.id == aweme.id) it.copy(collected = collected) else it }
+                        scope.launch {
+                            runCatching { repo.collect(aweme.id, collected) }
+                                .onFailure {
+                                    items = items.map { item ->
+                                        if (item.id == aweme.id) item.copy(collected = !collected) else item
+                                    }
+                                    toast(it.message ?: "收藏失败")
                                 }
-                            },
-                            onFollow = { aweme ->
-                                val author = aweme.author
-                                followedIds = followedIds + author.uid
-                                scope.launch {
-                                    runCatching { repo.follow(author.uid, author.secUid, true) }
-                                        .onFailure {
-                                            followedIds = followedIds - author.uid
-                                            toast(it.message ?: "关注失败")
-                                        }
+                        }
+                    },
+                    onFollow = { aweme ->
+                        val author = aweme.author
+                        followedIds = followedIds + author.uid
+                        scope.launch {
+                            runCatching { repo.follow(author.uid, author.secUid, true) }
+                                .onFailure {
+                                    followedIds = followedIds - author.uid
+                                    toast(it.message ?: "关注失败")
                                 }
-                            },
-                            onShare = { shareFor = it },
-                            onLogin = { showLogin = true },
-                            onSearch = { showSearch = true },
-                        )
-                    }
-                }
+                        }
+                    },
+                    onShare = { shareFor = it },
+                    onLogin = { showLogin = true },
+                    onSearch = { showSearch = true },
+                )
+            }
+            }
 
-                AppTab.Friend -> PlaceholderTab(
+            if (tab == AppTab.Friend) PlaceholderTab(
                     title = "朋友",
                     hint = "关注的人发的新作品会出现在这里\n（需要先在网页端登录并关注作者）",
-                )
-
-                AppTab.Message -> PlaceholderTab(
+            )
+            if (tab == AppTab.Message) PlaceholderTab(
                     title = "消息",
                     hint = "评论、点赞和粉丝通知正在接入\n目前请到官方客户端查看",
-                )
-
-                AppTab.Me -> MeTab(
+            )
+            if (tab == AppTab.Me) MeTab(
                     repo = repo,
                     me = me,
                     onLogin = { showLogin = true },
                     onOpenComments = { commentsFor = it },
-                )
-            }
+            )
         }
 
         DouyinBottomBar(
