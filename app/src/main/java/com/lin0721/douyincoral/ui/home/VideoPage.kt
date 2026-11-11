@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
@@ -89,7 +88,6 @@ fun VideoPage(
 ) {
     var progress by remember(aweme.id) { mutableFloatStateOf(0f) }
     var descExpanded by remember(aweme.id) { mutableStateOf(false) }
-    var immersive by remember(aweme.id) { mutableStateOf(false) }
     val ready = isCurrent && preparedId == aweme.id
 
     LaunchedEffect(ready, playing) {
@@ -106,11 +104,7 @@ fun VideoPage(
             .fillMaxSize()
             .background(Color.Black)
             .pointerInput(aweme.id) {
-                detectTapGestures(
-                    onTap = { onTogglePlay() },
-                    onDoubleTap = { onDoubleTap() },
-                    onLongPress = { immersive = !immersive },
-                )
+                detectTapGestures(onTap = { onTogglePlay() }, onDoubleTap = { onDoubleTap() })
             },
     ) {
         if (ready) {
@@ -166,10 +160,7 @@ fun VideoPage(
             aweme = aweme,
             followed = followed,
             playing = playing,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 10.dp, bottom = 34.dp)
-                .alpha(if (immersive) 0f else 1f),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 34.dp),
             onOpenProfile = onOpenProfile,
             onFollow = onFollow,
             onToggleLike = onToggleLike,
@@ -179,10 +170,7 @@ fun VideoPage(
         )
 
         Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 14.dp, end = 92.dp, bottom = 34.dp)
-                .alpha(if (immersive) 0f else 1f),
+            Modifier.align(Alignment.BottomStart).padding(start = 14.dp, end = 92.dp, bottom = 34.dp),
         ) {
             Text(
                 "@${aweme.author.nickname}",
