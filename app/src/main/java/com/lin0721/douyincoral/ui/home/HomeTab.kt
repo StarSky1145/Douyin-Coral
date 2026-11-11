@@ -68,6 +68,7 @@ fun HomeTab(
     onFollow: (Aweme) -> Unit,
     onShare: (Aweme) -> Unit,
     onLogin: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     var topTab by remember { mutableStateOf(TopTab.Recommend) }
 
@@ -112,6 +113,7 @@ fun HomeTab(
             me = me,
             onSelect = { topTab = it },
             onLogin = onLogin,
+            onSearch = onSearch,
         )
     }
 }
@@ -124,6 +126,7 @@ private fun BoxScope.TopBar(
     me: Profile?,
     onSelect: (TopTab) -> Unit,
     onLogin: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     Row(
         Modifier
@@ -169,7 +172,12 @@ private fun BoxScope.TopBar(
             )
         }
         Spacer(Modifier.width(14.dp))
-        Icon(Icons.Rounded.Search, contentDescription = "搜索", tint = Color.White, modifier = Modifier.size(22.dp))
+        Icon(
+            Icons.Rounded.Search,
+            contentDescription = "搜索",
+            tint = Color.White,
+            modifier = Modifier.size(22.dp).clickable { onSearch() },
+        )
     }
 }
 

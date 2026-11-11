@@ -208,6 +208,21 @@ object AwemeParser {
         )
     }
 
+    /** 综合搜索：data[] 里带 aweme_info 的格子才是视频。 */
+    fun parseSearch(json: JSONObject): FeedPage {
+        val data = json.optJSONArray("data")
+        val items = buildList {
+            if (data != null) {
+                for (i in 0 until data.length()) {
+                    val info = data.optJSONObject(i)?.obj("aweme_info") ?: continue
+                    parseAweme(info)?.let { add(it) }
+                }
+            }
+        }
+        val cursor = json.long("cursor").takeIf { it > 0 } ?: json.long("offset")
+        return FeedPage(items = items, hasMore = json.optInt("has_more", 0) == 1, cursor = cursor)
+    }
+
     fun parseComments(json: JSONObject): CommentPage {
         val list = json.optJSONArray("comments")
         val items = buildList {

@@ -1,6 +1,9 @@
 package com.lin0721.douyincoral.ui
 
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -103,13 +106,24 @@ fun CommentsSheet(
         },
     ) {
         Column(Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
-            Text(
-                "${formatCount(aweme.commentCount)} 条评论",
-                color = Dy.Content,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "${formatCount(aweme.commentCount)} 条评论",
+                    color = Dy.Content,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    Icons.Rounded.Close,
+                    contentDescription = "关闭",
+                    tint = Dy.ContentSecondary,
+                    modifier = Modifier.size(18.dp).clickable { onDismiss() },
+                )
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.heightIn(max = 460.dp),
@@ -127,12 +141,27 @@ fun CommentsSheet(
                         )
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(comment.nickname, color = Dy.ContentSecondary, fontSize = 12.sp)
+                            Text(comment.nickname, color = Dy.ContentDim, fontSize = 12.sp)
                             Spacer(Modifier.height(3.dp))
                             Text(comment.text, color = Dy.Content, fontSize = 14.sp, lineHeight = 20.sp)
+                            Spacer(Modifier.height(5.dp))
+                            Text(
+                                listOf(relativeTime(comment.createTime), "回复").joinToString(" · "),
+                                color = Dy.ContentSecondary,
+                                fontSize = 11.sp,
+                            )
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text(formatCount(comment.diggCount), color = Dy.ContentSecondary, fontSize = 11.sp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Rounded.Favorite,
+                                contentDescription = "点赞",
+                                tint = Dy.ContentSecondary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(formatCount(comment.diggCount), color = Dy.ContentSecondary, fontSize = 11.sp)
+                        }
                     }
                 }
                 if (hasMore) {

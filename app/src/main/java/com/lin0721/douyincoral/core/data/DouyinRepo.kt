@@ -42,6 +42,23 @@ class DouyinRepo(private val engine: DouyinWebEngine) {
         return page
     }
 
+    suspend fun search(keyword: String, offset: Long = 0L, count: Int = 10): FeedPage {
+        val json = engine.request(
+            "/aweme/v1/web/general/search/single/",
+            webParams + mapOf(
+                "keyword" to keyword,
+                "search_channel" to "aweme_general",
+                "search_source" to "normal_search",
+                "query_correct_type" to 1,
+                "is_filter_search" to 0,
+                "offset" to offset,
+                "count" to count,
+            ),
+        )
+        checkStatus(json)
+        return AwemeParser.parseSearch(json)
+    }
+
     suspend fun comments(awemeId: String, cursor: Long = 0L, count: Int = 20): CommentPage {
         val params = webParams + mapOf(
             "aweme_id" to awemeId,

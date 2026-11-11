@@ -46,3 +46,18 @@ fun Pill(
             .padding(horizontal = 8.dp, vertical = 4.dp),
     )
 }
+
+/** 抖音式相对时间：刚刚 / x分钟前 / x小时前 / x天前 / 日期。 */
+fun relativeTime(epochSeconds: Long): String {
+    if (epochSeconds <= 0L) return ""
+    val now = System.currentTimeMillis() / 1000
+    val diff = now - epochSeconds
+    return when {
+        diff < 60 -> "刚刚"
+        diff < 3600 -> "${diff / 60}分钟前"
+        diff < 86400 -> "${diff / 3600}小时前"
+        diff < 86400 * 30 -> "${diff / 86400}天前"
+        else -> java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date(epochSeconds * 1000))
+    }
+}

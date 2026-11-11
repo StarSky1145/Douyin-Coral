@@ -49,6 +49,7 @@ import com.lin0721.douyincoral.core.web.DouyinWebEngine
 import com.lin0721.douyincoral.ui.home.HomeTab
 import com.lin0721.douyincoral.ui.home.ShareSheet
 import com.lin0721.douyincoral.ui.me.MeTab
+import com.lin0721.douyincoral.ui.search.SearchScreen
 import com.lin0721.douyincoral.ui.shell.AppTab
 import com.lin0721.douyincoral.ui.shell.DouyinBottomBar
 import com.lin0721.douyincoral.ui.shell.PlaceholderTab
@@ -78,6 +79,7 @@ fun AppRoot() {
     var showLogin by remember { mutableStateOf(false) }
     var commentsFor by remember { mutableStateOf<Aweme?>(null) }
     var shareFor by remember { mutableStateOf<Aweme?>(null) }
+    var showSearch by remember { mutableStateOf(false) }
     var profileSecUid by remember { mutableStateOf<String?>(null) }
     var profileTitle by remember { mutableStateOf("") }
 
@@ -204,6 +206,7 @@ fun AppRoot() {
                             },
                             onShare = { shareFor = it },
                             onLogin = { showLogin = true },
+                            onSearch = { showSearch = true },
                         )
                     }
                 }
@@ -231,6 +234,14 @@ fun AppRoot() {
             current = tab,
             onSelect = { tab = it },
             onPublish = { toast("发布功能还没接") },
+        )
+    }
+
+    if (showSearch) {
+        SearchScreen(
+            repo = repo,
+            onClose = { showSearch = false },
+            onOpenComments = { commentsFor = it },
         )
     }
 
