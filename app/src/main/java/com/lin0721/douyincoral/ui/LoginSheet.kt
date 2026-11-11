@@ -105,7 +105,7 @@ fun LoginSheet(
                             loading = false
                         }
                     }
-                    loadUrl(DouyinEnv.HOME_URL)
+                    loadUrl("https://sso.douyin.com/")
                 }
             },
         )
