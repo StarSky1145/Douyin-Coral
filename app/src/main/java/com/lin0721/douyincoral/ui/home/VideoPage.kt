@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -86,6 +87,7 @@ fun VideoPage(
     onSeekTo: (Float) -> Unit,
 ) {
     var progress by remember(aweme.id) { mutableFloatStateOf(0f) }
+    var descExpanded by remember(aweme.id) { mutableStateOf(false) }
     val ready = isCurrent && preparedId == aweme.id
 
     LaunchedEffect(ready, playing) {
@@ -187,8 +189,9 @@ fun VideoPage(
                     color = Color.White.copy(alpha = 0.95f),
                     fontSize = 13.sp,
                     lineHeight = 19.sp,
-                    maxLines = 3,
+                    maxLines = if (descExpanded) 6 else 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { descExpanded = !descExpanded },
                 )
             }
             Spacer(Modifier.height(10.dp))
