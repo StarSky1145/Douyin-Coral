@@ -1,0 +1,130 @@
+[
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "feed-get",
+  "body": "",
+  "params": "device_platform=webapp&aid=6383&channel=channel_pc_web&count=8&max_cursor=0",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6Ur3YDTH0SVkMD2fLV3G9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gcV"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "detail-get",
+  "body": "",
+  "params": "device_platform=webapp&aid=6383&channel=channel_pc_web&aweme_id=7380308675841297704&msToken=abc_DEF-123",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6--3YDTH0SVkMD2fNV3G9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gaL"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "search-cjk",
+  "body": "",
+  "params": "device_platform=webapp&aid=6383&keyword=%E7%8F%8A%E7%91%9A%E7%BA%A2&offset=0&count=10",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6lr3YDTH0SVkMD2ffx3G9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gGi"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "like-post",
+  "body": "aweme_id=7380308675841297704&type=1",
+  "params": "device_platform=webapp&aid=6383&channel=channel_pc_web&aweme_id=7380308675841297704&type=1",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6f1tYDTH0SVkMD2fB7HG9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gcx"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "comment-post",
+  "body": "aweme_id=1&text=hello&comment_id=0&text_extra=%5B%5D",
+  "params": "device_platform=webapp&aid=6383&channel=channel_pc_web",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q65KcYDTH0SVkMD2fkQHG9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gcf"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "dhzx",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "salt-dhzx",
+  "body": "",
+  "params": "a=1&b=2",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6UVBYDTH0SVkMD2fADFG9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39gbg"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "1600|900|1624|980|0|0|0|0|1920|1080|1920|1040|1600|900|24|24|Win32",
+  "salt": "cus",
+  "pageId": 6241,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "pageid",
+  "body": "",
+  "params": "a=1&b=2",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6lM3KDTH0aHEMD2fpx3G9g39HMYp9exoGhtvgmDjiT/QIeLjy4hbTNOprQCj01wf9uso/2AMmDSkKl5Q5xSSs1Xce6UgrUkP-hsACFrQsv1liOfkqw2aFuRmA9Fe-wHvPjojx2f39hbc"
+ },
+ {
+  "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+  "fp": "800|600|824|680|0|0|0|0|1280|720|1280|720|800|600|24|24|MacIntel",
+  "salt": "cus",
+  "pageId": 0,
+  "now": 1762866245123,
+  "rand": [
+   1299,
+   4,
+   9871
+  ],
+  "name": "fp-short",
+  "body": "",
+  "params": "c=3",
+  "a_bogus": "DJ8hBfg2kVxBknWu5lALfY3q6lM3YDTH0SVkMD2fOd3G9g39HMYp9exoGhtvgmDjiT/QIeujy4hJYpPMiO5jA3739mJLl2aBmDSkKl5Q5xSt5HJruyDQrsJx-i4lFeqm5XN1EOfkoXAaSYEh09oHmd38eqVxO9EvBD=="
+ }
+]

@@ -67,4 +67,6 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
+    implementation(libs.okhttp)
+    implementation(libs.quickjs)
 }

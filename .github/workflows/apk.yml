@@ -30,6 +30,9 @@ jobs:
           SDKM=$(ls -d $ANDROID_SDK_ROOT/cmdline-tools/*/bin 2>/dev/null | head -1)
           yes | "$SDKM/sdkmanager" --licenses > /dev/null 2>&1 || true
 
+      - name: 校验 a_bogus 实现
+        run: node tools/abogus-check.mjs
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: 组装 debug
