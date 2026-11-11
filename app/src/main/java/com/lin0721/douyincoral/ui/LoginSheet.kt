@@ -88,7 +88,9 @@ fun LoginSheet(
                         domStorageEnabled = true
                         databaseEnabled = true
                         mediaPlaybackRequiresUserGesture = false
-                        cacheMode = WebSettings.LOAD_DEFAULT
+                        loadsImagesAutomatically = false
+                        blockNetworkImage = true
+                        cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                         mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                         userAgentString = DouyinEnv.USER_AGENT
                         useWideViewPort = true
@@ -126,7 +128,7 @@ fun LoginSheet(
             Column(Modifier.weight(1f)) {
                 Text("登录抖音", color = Dy.Content, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    if (loggedIn) "登录成功，正在同步…" else "电脑版 · 右上角「登录」，手机号验证码",
+                    if (loggedIn) "登录成功，正在同步…" else "个人页入口 · 手机号验证码登录",
                     color = Dy.ContentSecondary,
                     fontSize = 11.sp,
                 )
