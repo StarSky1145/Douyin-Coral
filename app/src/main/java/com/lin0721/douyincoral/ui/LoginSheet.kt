@@ -42,6 +42,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.lin0721.douyincoral.ui.theme.Dy
 import kotlinx.coroutines.delay
 
+/** 手机网页版不提供登录入口，用桌面版 UA 才能看到「登录」。 */
+private const val DESKTOP_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+
 /**
  * 内嵌网页登录：直接把抖音网页版塞进 WebView。
  *
@@ -87,7 +91,12 @@ fun LoginSheet(
                         mediaPlaybackRequiresUserGesture = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                         mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        userAgentString = userAgentString.replace("; wv)", ")")
+                        userAgentString = DESKTOP_UA
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
+                        setSupportZoom(true)
+                        builtInZoomControls = true
+                        displayZoomControls = false
                     }
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                     webViewClient = object : WebViewClient() {
@@ -95,7 +104,7 @@ fun LoginSheet(
                             loading = false
                         }
                     }
-                    loadUrl("https://www.douyin.com/?recommend=1")
+                    loadUrl("https://www.douyin.com/")
                 }
             },
         )
@@ -118,7 +127,7 @@ fun LoginSheet(
             Column(Modifier.weight(1f)) {
                 Text("登录抖音", color = Dy.Content, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    if (loggedIn) "登录成功，正在同步…" else "用手机号 + 验证码登录",
+                    if (loggedIn) "登录成功，正在同步…" else "电脑版 · 右上角「登录」，手机号验证码",
                     color = Dy.ContentSecondary,
                     fontSize = 11.sp,
                 )
