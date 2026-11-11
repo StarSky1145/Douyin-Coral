@@ -4,14 +4,16 @@
 
 ## 为什么不是一个普通客户端
 
-抖音 web 的每个接口都要求 `a_bogus` 签名，而签名函数就活在他们自己的页面里。这个项目不逆向算法，
-而是挂一个不可见的 WebView 常驻 `www.douyin.com`：
+抖音 web 的每个接口都要求 `a_bogus` 签名。0.3.0 起不再挂常驻 WebView 借页面签名，
+而是自己算：
 
-1. 真实 Chromium 自己过风控、自己维护 `ttwid` / `msToken`；
-2. 把页面里的 `byted_acrawler.frontierSign` 借出来，替我们的请求签名；
-3. 在页面上下文里 `fetch`，Cookie 与同源策略天然满足。
+1. `assets/sign/abogus.js` 是一段纯 JS 的签名实现（SM3 + RC4 + 自定义 base64），
+   由 QuickJS 在应用内执行，输入查询串 / UA / 环境指纹，输出 `a_bogus`；
+2. 登录仍然交给内嵌 WebView（桌面 UA），成功后把整组 Cookie 落进 SharedPreferences；
+3. OkHttp 直连 `www.douyin.com/aweme/v1/web/…`，头里带 Cookie、Referer、UA，参数里带
+   `msToken` 与 `a_bogus`；返回网页而不是 JSON 时直接报「被风控要求验证」。
 
-原生层只负责拼参数、解析 JSON、渲染 UI、播放与下载。
+签名算法参考 Johnserf-Seed/f2 的公开实现，本项目用 JavaScript 重写，见 [NOTICE](NOTICE.md)。
 
 ## 视觉
 
@@ -27,7 +29,7 @@
 
 | 模块 | 状态 |
 | --- | --- |
-| 推荐流 / 竖向翻页 | 接 web feed，页面自抓与主动签名双通道 |
+| 推荐流 / 竖向翻页 | 接 web feed，QuickJS 签名 + OkHttp 直连 |
 | 点赞 / 收藏 / 关注 | 状态本地先行，失败回滚 |
 | 评论列表与发布 | 支持一级评论 |
 | 分享面板 | 复制链接、保存视频（CDN 多线路探测） |
@@ -36,8 +38,9 @@
 
 ## 致谢
 
-架构思路参考了 MIT 许可的 [Jie009/DouYin-TV](https://github.com/Jie009/DouYin-TV)（隐藏 WebView 数据泵 + 原生播放）。
-本项目代码为独立实现。
+a_bogus 签名流程参考 Apache-2.0 许可的 [Johnserf-Seed/f2](https://github.com/Johnserf-Seed/f2)，
+用 JavaScript 重新实现；早期版本的「隐藏 WebView 数据泵」思路参考 MIT 许可的
+[Jie009/DouYin-TV](https://github.com/Jie009/DouYin-TV)。本项目代码为独立实现。
 
 ## 免责声明
 

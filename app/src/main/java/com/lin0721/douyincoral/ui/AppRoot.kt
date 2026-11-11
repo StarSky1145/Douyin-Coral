@@ -98,6 +98,7 @@ fun AppRoot() {
             items = (items + page.items).distinctBy { it.id }
             cursor = if (page.cursor > 0) page.cursor else cursor + page.items.size
             hasMore = page.hasMore && page.items.isNotEmpty()
+            if (items.isEmpty()) loadError = "接口没有返回推荐数据，先登录再试一次"
         }.onFailure { loadError = it.message ?: "加载失败" }
         loading = false
         if (result.isFailure && items.isEmpty() && attempt < 3) {
