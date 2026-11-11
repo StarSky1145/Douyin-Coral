@@ -227,12 +227,8 @@ fun AppRoot() {
             onFinished = {
                 showLogin = false
                 cookies.syncFromWebView()
-                scope.launch {
-                    refreshSelf()
-                    items = emptyList()
-                    cursor = 0L
-                    loadMore()
-                }
+                // 登录只补身份，不清空列表：清了会让竖向翻页跳回第一条
+                scope.launch { refreshSelf() }
             },
         )
     }
