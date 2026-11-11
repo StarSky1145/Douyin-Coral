@@ -302,7 +302,7 @@ private fun VideoPreview(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     this.player = player
                 }
             },
