@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeTab(
     items: List<Aweme>,
+    active: Boolean,
     hasMore: Boolean,
     loading: Boolean,
     me: Profile?,
@@ -76,6 +77,7 @@ fun HomeTab(
         if (topTab == TopTab.Recommend) {
             FeedPager(
                 items = items,
+                active = active,
                 hasMore = hasMore,
                 loading = loading,
                 followedIds = followedIds,
@@ -204,6 +206,7 @@ private fun TabTitle(text: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun FeedPager(
     items: List<Aweme>,
+    active: Boolean,
     hasMore: Boolean,
     loading: Boolean,
     followedIds: Set<String>,
@@ -235,6 +238,12 @@ private fun FeedPager(
             .apply { repeatMode = Player.REPEAT_MODE_OFF }
     }
     DisposableEffect(Unit) { onDispose { player.release() } }
+
+    // 页签不可见就停，切回来再接着放
+    LaunchedEffect(active, preparedId) {
+        if (!active) player.pause()
+        else if (preparedId != null) player.play()
+    }
 
     LaunchedEffect(pagerState.currentPage, items.size) {
         val page = pagerState.currentPage
