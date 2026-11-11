@@ -15,8 +15,13 @@ android {
         applicationId = "com.lin0721.douyincoral"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "0.3.10"
+<<<<<<< HEAD
+        versionCode = 23
+        versionName = "0.3.11"
+=======
+        versionCode = 16
+        versionName = "0.3.4"
+>>>>>>> parent of f25d508 (feat(feed): 点击简介展开/收起)
     }
 
     buildTypes {
