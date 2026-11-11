@@ -49,7 +49,7 @@ import coil3.compose.AsyncImage
 import com.lin0721.douyincoral.core.data.DouyinRepo
 import com.lin0721.douyincoral.core.model.Aweme
 import com.lin0721.douyincoral.core.model.Comment
-import com.lin0721.douyincoral.ui.theme.Coral
+import com.lin0721.douyincoral.ui.theme.Dy
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,15 +89,15 @@ fun CommentsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Coral.Surface,
-        contentColor = Coral.Content,
+        containerColor = Dy.Surface,
+        contentColor = Dy.Content,
         dragHandle = {
             Box(Modifier.fillMaxWidth().padding(10.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
                         .size(width = 36.dp, height = 4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Coral.SurfaceHigh),
+                        .background(Dy.SurfaceHigh),
                 )
             }
         },
@@ -105,7 +105,7 @@ fun CommentsSheet(
         Column(Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
             Text(
                 "${formatCount(aweme.commentCount)} 条评论",
-                color = Coral.Content,
+                color = Dy.Content,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
@@ -127,12 +127,12 @@ fun CommentsSheet(
                         )
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(comment.nickname, color = Coral.ContentSecondary, fontSize = 12.sp)
+                            Text(comment.nickname, color = Dy.ContentSecondary, fontSize = 12.sp)
                             Spacer(Modifier.height(3.dp))
-                            Text(comment.text, color = Coral.Content, fontSize = 14.sp, lineHeight = 20.sp)
+                            Text(comment.text, color = Dy.Content, fontSize = 14.sp, lineHeight = 20.sp)
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text(formatCount(comment.diggCount), color = Coral.ContentSecondary, fontSize = 11.sp)
+                        Text(formatCount(comment.diggCount), color = Dy.ContentSecondary, fontSize = 11.sp)
                     }
                 }
                 if (hasMore) {
@@ -141,7 +141,7 @@ fun CommentsSheet(
                         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
                             if (loading) {
                                 CircularProgressIndicator(
-                                    color = Coral.ContentSecondary,
+                                    color = Dy.ContentSecondary,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -157,16 +157,16 @@ fun CommentsSheet(
                 TextField(
                     value = input,
                     onValueChange = { input = it },
-                    placeholder = { Text("说点什么…", color = Coral.ContentSecondary, fontSize = 13.sp) },
+                    placeholder = { Text("说点什么…", color = Dy.ContentSecondary, fontSize = 13.sp) },
                     modifier = Modifier.weight(1f).clip(RoundedCornerShape(18.dp)),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Coral.SurfaceHigh,
-                        unfocusedContainerColor = Coral.SurfaceHigh,
+                        focusedContainerColor = Dy.SurfaceHigh,
+                        unfocusedContainerColor = Dy.SurfaceHigh,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Coral.Accent,
-                        focusedTextColor = Coral.Content,
-                        unfocusedTextColor = Coral.Content,
+                        cursorColor = Dy.Accent,
+                        focusedTextColor = Dy.Content,
+                        unfocusedTextColor = Dy.Content,
                     ),
                     maxLines = 3,
                 )
@@ -188,7 +188,7 @@ fun CommentsSheet(
                         }
                     },
                 ) {
-                    Icon(Icons.Rounded.Send, contentDescription = "发送", tint = Coral.Accent)
+                    Icon(Icons.Rounded.Send, contentDescription = "发送", tint = Dy.Accent)
                 }
             }
         }

@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.lin0721.douyincoral.ui.AppRoot
-import com.lin0721.douyincoral.ui.theme.DouyinCoralTheme
+import com.lin0721.douyincoral.ui.theme.DyTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
-            DouyinCoralTheme { AppRoot() }
+            DyTheme { AppRoot() }
         }
     }
 }

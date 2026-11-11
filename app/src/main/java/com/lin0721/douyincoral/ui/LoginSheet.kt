@@ -40,7 +40,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lin0721.douyincoral.core.Diag
-import com.lin0721.douyincoral.ui.theme.Coral
+import com.lin0721.douyincoral.ui.theme.Dy
 import kotlinx.coroutines.delay
 
 private const val DESKTOP_UA =
@@ -182,16 +182,16 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .background(Coral.Background)
+                    .background(Dy.Background)
                     .padding(horizontal = 26.dp),
             ) {
                 Spacer(Modifier.height(48.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("登录抖音", color = Coral.Content, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Text("登录抖音", color = Dy.Content, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.weight(1f))
                     Text(
                         "关闭",
-                        color = Coral.ContentSecondary,
+                        color = Dy.ContentSecondary,
                         fontSize = 13.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))
@@ -202,7 +202,7 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "手机号验证码登录，登录态存在本机",
-                    color = Coral.ContentSecondary,
+                    color = Dy.ContentSecondary,
                     fontSize = 12.sp,
                 )
 
@@ -220,12 +220,12 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
                     Spacer(Modifier.size(10.dp))
                     Text(
                         if (busy) "发送中…" else "获取验证码",
-                        color = Coral.Accent,
+                        color = Dy.Accent,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))
-                            .background(Coral.AccentSoft.copy(alpha = 0.16f))
+                            .background(Dy.AccentSoft.copy(alpha = 0.16f))
                             .clickable(enabled = !busy) {
                                 if (phone.length < 11) {
                                     status = "手机号要 11 位"
@@ -247,13 +247,13 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
 
                 Spacer(Modifier.weight(1f))
 
-                Text(status, color = Coral.ContentSecondary, fontSize = 11.sp)
+                Text(status, color = Dy.ContentSecondary, fontSize = 11.sp)
                 Spacer(Modifier.height(10.dp))
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (code.length >= 4) Coral.Accent else Coral.SurfaceHigh)
+                        .background(if (code.length >= 4) Dy.Accent else Dy.SurfaceHigh)
                         .clickable(enabled = code.length >= 4) {
                             busy = true
                             status = "正在登录…"
@@ -274,7 +274,7 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
                 ) {
                     Text(
                         "登录",
-                        color = if (code.length >= 4) Coral.Content else Coral.ContentSecondary,
+                        color = if (code.length >= 4) Dy.Content else Dy.ContentSecondary,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -282,7 +282,7 @@ fun LoginSheet(onDismiss: () -> Unit, onFinished: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     "登录信息只保存在本机，用来读取你自己的点赞、收藏和评论",
-                    color = Coral.ContentSecondary.copy(alpha = 0.75f),
+                    color = Dy.ContentSecondary.copy(alpha = 0.75f),
                     fontSize = 11.sp,
                 )
                 Spacer(Modifier.height(28.dp))
@@ -306,19 +306,19 @@ private fun Field(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Coral.Surface)
+            .background(Dy.Surface)
             .padding(horizontal = 16.dp, vertical = 15.dp),
     ) {
         if (value.isEmpty()) {
-            Text(placeholder, color = Coral.ContentSecondary.copy(alpha = 0.7f), fontSize = 14.sp)
+            Text(placeholder, color = Dy.ContentSecondary.copy(alpha = 0.7f), fontSize = 14.sp)
         }
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-            textStyle = TextStyle(color = Coral.Content, fontSize = 14.sp),
-            cursorBrush = SolidColor(Coral.Accent),
+            textStyle = TextStyle(color = Dy.Content, fontSize = 14.sp),
+            cursorBrush = SolidColor(Dy.Accent),
             modifier = Modifier.fillMaxWidth(),
         )
     }

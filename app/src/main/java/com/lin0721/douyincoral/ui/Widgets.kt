@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lin0721.douyincoral.ui.theme.Coral
+import com.lin0721.douyincoral.ui.theme.Dy
 
 /** 抖音的计数习惯：1.2万 */
 fun formatCount(value: Long): String {
@@ -30,8 +30,8 @@ fun formatCount(value: Long): String {
 fun Pill(
     text: String,
     modifier: Modifier = Modifier,
-    background: Color = Coral.SurfaceHigh,
-    color: Color = Coral.Content,
+    background: Color = Dy.SurfaceHigh,
+    color: Color = Dy.Content,
 ) {
     Text(
         text = text,

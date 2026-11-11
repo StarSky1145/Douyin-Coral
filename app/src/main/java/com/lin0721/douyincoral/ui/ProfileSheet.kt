@@ -43,7 +43,7 @@ import coil3.compose.AsyncImage
 import com.lin0721.douyincoral.core.data.DouyinRepo
 import com.lin0721.douyincoral.core.model.Aweme
 import com.lin0721.douyincoral.core.model.Profile
-import com.lin0721.douyincoral.ui.theme.Coral
+import com.lin0721.douyincoral.ui.theme.Dy
 
 @Composable
 fun ProfileSheet(
@@ -75,7 +75,7 @@ fun ProfileSheet(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(Coral.Background)) {
+        Column(Modifier.fillMaxSize().background(Dy.Background)) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -83,13 +83,13 @@ fun ProfileSheet(
                 Icon(
                     Icons.Rounded.ArrowBack,
                     contentDescription = "返回",
-                    tint = Coral.Content,
+                    tint = Dy.Content,
                     modifier = Modifier.size(22.dp).clickable { onDismiss() },
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
                     profile?.nickname ?: nickname,
-                    color = Coral.Content,
+                    color = Dy.Content,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -108,7 +108,7 @@ fun ProfileSheet(
                     Column {
                         Text(
                             profile?.nickname ?: nickname,
-                            color = Coral.Content,
+                            color = Dy.Content,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -123,7 +123,7 @@ fun ProfileSheet(
                 profile?.signature?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         it,
-                        color = Coral.ContentSecondary,
+                        color = Dy.ContentSecondary,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
@@ -133,12 +133,12 @@ fun ProfileSheet(
 
                 if (loading && posts.isEmpty()) {
                     Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Coral.Accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(color = Dy.Accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
                     }
                 }
                 error?.let {
                     Box(Modifier.fillMaxWidth().padding(18.dp)) {
-                        Text(it, color = Coral.Danger, fontSize = 12.sp)
+                        Text(it, color = Dy.Danger, fontSize = 12.sp)
                     }
                 }
                 posts.chunked(3).forEach { rowItems ->
@@ -162,7 +162,7 @@ fun ProfileSheet(
                                 )
                                 Text(
                                     formatCount(post.diggCount),
-                                    color = Coral.Content,
+                                    color = Dy.Content,
                                     fontSize = 10.sp,
                                     modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                                 )
@@ -181,8 +181,8 @@ fun ProfileSheet(
 @Composable
 private fun StatItem(label: String, value: Long) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("${formatCount(value)}", color = Coral.Content, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("${formatCount(value)}", color = Dy.Content, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.width(4.dp))
-        Text(label, color = Coral.ContentSecondary, fontSize = 11.sp)
+        Text(label, color = Dy.ContentSecondary, fontSize = 11.sp)
     }
 }

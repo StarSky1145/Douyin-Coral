@@ -74,6 +74,7 @@ data class Profile(
     val awemeCount: Long,
     val likedCount: Long,
     val isSelf: Boolean,
+    val uniqueId: String = "",
 )
 
 internal fun JSONObject.str(key: String): String = optString(key, "")
@@ -129,6 +130,7 @@ object AwemeParser {
             awemeCount = user.long("aweme_count"),
             likedCount = user.long("total_favorited"),
             isSelf = user.optBoolean("is_self", false),
+            uniqueId = user.str("unique_id"),
         )
     }
 
