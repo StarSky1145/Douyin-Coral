@@ -3,6 +3,8 @@ package com.lin0721.douyincoral.ui
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -41,16 +43,30 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.lin0721.douyincoral.ui.theme.Dy
 import kotlinx.coroutines.delay
+import java.io.ByteArrayInputStream
 
-/** 手机网页版不提供登录入口，用桌面版 UA 才能看到「登录」。 */
-private const val DESKTOP_UA =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+/** 小屏适配：把登录弹窗放大，输入框拉成数字键盘友好的尺寸。 */
+private const val SHRINK_JS = """
+(function(){
+  var css = '@media (max-width:520px){' +
+    'div[class*="login"] input{font-size:18px !important;height:52px !important;}' +
+    'button[class*="login"],div[class*="login"] button{font-size:18px !important;min-height:52px !important;}' +
+    'input[type="tel"],input[inputmode="numeric"]{font-size:20px !important;}' +
+    '}';
+  var s = document.createElement('style'); s.textContent = css;
+  document.head && document.head.appendChild(s);
+  document.querySelectorAll('input').forEach(function(i){
+    if (/手机|phone|tel/i.test(i.placeholder||'')) { i.setAttribute('inputmode','numeric'); i.setAttribute('type','tel'); }
+  });
+  return 'ok';
+})()
+"""
 
 /**
- * 内嵌网页登录：直接把抖音网页版塞进 WebView。
+ * 内嵌网页登录（小屏版）。
  *
- * 短信验证码、滑块、异地风控全交给真正的网页去处理——我们只等 Cookie 里出现
- * sessionid / sid_tt 就当登录成功，然后把整组 Cookie 交给数据泵复用。
+ * 页面本身过重，这里做了三件事：拦掉图片/字体/视频请求、缓存优先、
+ * 登录出来后注入 CSS 把控件放大。登录成功靠 Cookie 里出现 sessionid 判定。
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -66,42 +82,51 @@ fun LoginSheet(
         cm.setAcceptCookie(true)
         while (!loggedIn) {
             delay(600)
-            val cookie = cm.getCookie("https://www.douyin.com") ?: ""
-            if (cookie.contains("sessionid=") && cookie.contains("sid_tt=")) loggedIn = true
+            val c = cm.getCookie("https://www.douyin.com") ?: ""
+            if (c.contains("sessionid=") && c.contains("sid_tt=")) loggedIn = true
         }
     }
-
-    LaunchedEffect(loggedIn) {
-        if (loggedIn) {
-            delay(600)
-            onFinished()
-        }
-    }
+    LaunchedEffect(loggedIn) { if (loggedIn) { delay(500); onFinished() } }
 
     Box(Modifier.fillMaxSize().background(Dy.Background)) {
         AndroidView(
-            modifier = Modifier.fillMaxSize().padding(top = 52.dp),
+            modifier = Modifier.fillMaxSize().padding(top = 48.dp),
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(AndroidColor.BLACK)
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
-                        databaseEnabled = true
-                        mediaPlaybackRequiresUserGesture = false
-                        cacheMode = WebSettings.LOAD_DEFAULT
-                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        userAgentString = DESKTOP_UA
+                        cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                        loadsImagesAutomatically = false
+                        blockNetworkImage = true
                         useWideViewPort = true
                         loadWithOverviewMode = true
                         setSupportZoom(true)
                         builtInZoomControls = true
                         displayZoomControls = false
+                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                     }
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                     webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): WebResourceResponse? {
+                            val u = request.url?.toString()?.lowercase() ?: return null
+                            val heavy = u.endsWith(".woff") || u.endsWith(".woff2") || u.endsWith(".ttf") ||
+                                u.endsWith(".otf") || u.endsWith(".mp4") || u.endsWith(".m4s")
+                            if (!heavy) return null
+                            return WebResourceResponse(
+                                "text/plain", "utf-8", 204, "No Content",
+                                mapOf("Cache-Control" to "max-age=86400"),
+                                ByteArrayInputStream(ByteArray(0)),
+                            )
+                        }
+
                         override fun onPageFinished(view: WebView, url: String?) {
                             loading = false
+                            view.evaluateJavascript(SHRINK_JS, null)
                         }
                     }
                     loadUrl("https://www.douyin.com/")
@@ -110,11 +135,7 @@ fun LoginSheet(
         )
 
         Row(
-            Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(52.dp)
-                .padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().height(48.dp).padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -127,27 +148,22 @@ fun LoginSheet(
             Column(Modifier.weight(1f)) {
                 Text("登录抖音", color = Dy.Content, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    if (loggedIn) "登录成功，正在同步…" else "电脑版 · 右上角「登录」，手机号验证码",
-                    color = Dy.ContentSecondary,
-                    fontSize = 11.sp,
+                    if (loggedIn) "登录成功，正在同步…" else "点右上角「登录」→ 手机号验证码",
+                    color = Dy.ContentSecondary, fontSize = 11.sp,
                 )
             }
             if (loading && !loggedIn) {
-                CircularProgressIndicator(color = Dy.ContentDim, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(color = Dy.ContentDim, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
         }
 
         if (loggedIn) {
             Box(
-                Modifier
-                    .align(Alignment.Center)
+                Modifier.align(Alignment.Center)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color.Black.copy(alpha = 0.82f))
-                    .padding(horizontal = 22.dp, vertical = 16.dp),
-            ) {
-                Text("已登录，正在载入推荐流", color = Color.White, fontSize = 13.sp)
-            }
+                    .background(Color.Black.copy(alpha = 0.85f))
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+            ) { Text("已登录，正在载入推荐流", color = Color.White, fontSize = 13.sp) }
         }
     }
 }
