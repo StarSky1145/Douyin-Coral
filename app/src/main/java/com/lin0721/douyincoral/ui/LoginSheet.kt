@@ -128,7 +128,7 @@ fun LoginSheet(
             Column(Modifier.weight(1f)) {
                 Text("登录抖音", color = Dy.Content, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    if (loggedIn) "登录成功，正在同步…" else "个人页入口 · 手机号验证码登录",
+                    if (loggedIn) "登录成功，正在同步…" else "账号登录页 · 手机号 + 验证码",
                     color = Dy.ContentSecondary,
                     fontSize = 11.sp,
                 )
