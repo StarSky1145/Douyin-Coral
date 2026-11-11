@@ -122,18 +122,17 @@ fun AppRoot() {
 
     Column(Modifier.fillMaxSize().background(Dy.Background)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            // 首页常驻：切页签不销毁翻页器，回来还停在原视频
-            Box(Modifier.fillMaxSize().alpha(if (tab == AppTab.Home) 1f else 0f)) {
-            if (items.isEmpty()) {
-                LoadingScreen(
-                    status = if (loading) "正在加载推荐…" else "正在连接抖音接口…",
-                    error = loadError,
-                    loggedIn = cookies.hasLogin,
-                    onRetry = { scope.launch { loadMore() } },
-                    onLogin = { showLogin = true },
-                )
-            } else {
-                HomeTab(
+            if (tab == AppTab.Home) {
+                if (items.isEmpty()) {
+                    LoadingScreen(
+                        status = if (loading) "正在加载推荐…" else "正在连接抖音接口…",
+                        error = loadError,
+                        loggedIn = cookies.hasLogin,
+                        onRetry = { scope.launch { loadMore() } },
+                        onLogin = { showLogin = true },
+                    )
+                } else {
+HomeTab(
                     items = items,
                     hasMore = hasMore,
                     loading = loading,
@@ -184,25 +183,22 @@ fun AppRoot() {
                     onLogin = { showLogin = true },
                     onSearch = { showSearch = true },
                 )
+                }
             }
-            }
-
             if (tab == AppTab.Friend) PlaceholderTab(
-                    title = "朋友",
-                    hint = "关注的人发的新作品会出现在这里\n（需要先在网页端登录并关注作者）",
+                title = "朋友",
+                hint = "关注的人发的新作品会出现在这里\n（需要先在网页端登录并关注作者）",
             )
             if (tab == AppTab.Message) PlaceholderTab(
-                    title = "消息",
-                    hint = "评论、点赞和粉丝通知正在接入\n目前请到官方客户端查看",
+                title = "消息",
+                hint = "评论、点赞和粉丝通知正在接入\n目前请到官方客户端查看",
             )
             if (tab == AppTab.Me) MeTab(
-                    repo = repo,
-                    me = me,
-                    onLogin = { showLogin = true },
-                    onOpenComments = { commentsFor = it },
+                repo = repo,
+                me = me,
+                onLogin = { showLogin = true },
+                onOpenComments = { commentsFor = it },
             )
-        }
-
         DouyinBottomBar(
             current = tab,
             onSelect = { tab = it },

@@ -16,8 +16,8 @@ android {
         minSdk = 26
         targetSdk = 36
 <<<<<<< HEAD
-        versionCode = 23
-        versionName = "0.3.11"
+        versionCode = 24
+        versionName = "0.3.12"
 =======
         versionCode = 16
         versionName = "0.3.4"
