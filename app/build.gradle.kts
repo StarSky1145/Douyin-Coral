@@ -15,8 +15,8 @@ android {
         applicationId = "com.lin0721.douyincoral"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26
-        versionName = "0.3.14"
+        versionCode = 27
+        versionName = "0.4.0"
     }
 
     buildTypes {

@@ -54,6 +54,20 @@ class CookieStore(context: Context) {
     }
 
     /** 是否已登录：sessionid 与 sid_tt 都在就算。 */
+    /** 从「a=1; b=2」这种整串 Cookie 导入，返回解析到的条数。 */
+    fun importFrom(raw: String): Int {
+        var n = 0
+        raw.split(';').forEach { part ->
+            val item = part.trim()
+            val eq = item.indexOf('=')
+            if (eq > 0) {
+                put(item.substring(0, eq).trim(), item.substring(eq + 1).trim())
+                n++
+            }
+        }
+        return n
+    }
+
     val hasLogin: Boolean
         get() = cookie("sessionid") != null && cookie("sid_tt") != null
 
