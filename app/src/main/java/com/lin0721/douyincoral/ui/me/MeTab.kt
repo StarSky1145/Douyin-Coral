@@ -54,13 +54,13 @@ fun MeTab(
     onOpenComments: (Aweme) -> Unit,
 ) {
     var tab by remember { mutableStateOf(MeTabTitle.Posts) }
-    var items by remember { mutableStateOf<List<Aweme>>(emptyList()) }
+    var videos by remember { mutableStateOf<List<Aweme>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
 
     LaunchedEffect(tab, me?.secUid) {
-        val profile = me ?: run { items = emptyList(); return@LaunchedEffect }
+        val profile = me ?: run { videos = emptyList(); return@LaunchedEffect }
         loading = true
-        items = runCatching {
+        videos = runCatching {
             when (tab) {
                 MeTabTitle.Posts -> repo.userPosts(profile.secUid).items
                 MeTabTitle.Liked -> repo.liked().items
@@ -157,7 +157,7 @@ fun MeTab(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Dy.ContentDim, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
             }
-        } else if (items.isEmpty()) {
+        } else if (videos.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("还没有内容", color = Dy.ContentSecondary, fontSize = 12.sp)
             }
@@ -168,7 +168,7 @@ fun MeTab(
                 horizontalArrangement = Arrangement.spacedBy(1.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                items(items, key = { it.id }) { aweme ->
+                items(videos, key = { it.id }) { aweme ->
                     AsyncImage(
                         model = aweme.video.cover,
                         contentDescription = null,
